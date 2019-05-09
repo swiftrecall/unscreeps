@@ -1,0 +1,19 @@
+{
+  "name": "unscreeps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+	"build": "tsc -p ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swiftrecall/unscreeps.git"
+  },
+  "author": "Jesse Bandel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/swiftrecall/unscreeps/issues"
+  },
+  "homepage": "https://github.com/swiftrecall/unscreeps#readme"
+}
