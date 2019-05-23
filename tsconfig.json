@@ -2,10 +2,9 @@
   "compilerOptions": {
     "target": "es5",
     "module": "commonjs",
-    "outDir": "./tsc-out",
-    "rootDir": "./src",
+    "outDir": "./dist/",
+    "rootDir": "./src/",
     "removeComments": true,
-    "strict": true,
-    "esModuleInterop": true
+    "strict": true
   }
 }
