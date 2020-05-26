@@ -1,3 +1,7 @@
-export function main() {
-  var r = Game.rooms[0];
+
+
+function main() {
+    console.log('Running');
 }
+
+main();
