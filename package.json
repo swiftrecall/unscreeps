@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-	"build": "tsc -p ."
+    "build": "tsc -p ."
   },
   "repository": {
     "type": "git",
@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/swiftrecall/unscreeps/issues"
   },
-  "homepage": "https://github.com/swiftrecall/unscreeps#readme"
+  "homepage": "https://github.com/swiftrecall/unscreeps#readme",
+  "devDependencies": {
+    "@types/screeps": "^3.1.2",
+    "typescript": "^3.9.3"
+  }
 }
