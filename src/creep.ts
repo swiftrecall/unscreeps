@@ -1,1 +1,0 @@
-Creep.prototype.execute = function () {};
