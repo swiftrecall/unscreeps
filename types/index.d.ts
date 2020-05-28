@@ -10,9 +10,24 @@ interface Room {
   execute(): void;
   status(): RoomLifeCycleStatus;
   init(): void;
+  initMemory(): void;
 }
 
 interface RoomMemory {
   lifeCycleStatus: undefined | RoomLifeCycleStatus;
-  minerals: { [key: string]: string[] };
+  minerals: { [key: string]: string[] } | false;
+}
+
+declare enum CreepType { 
+  Harvester = "h"
+}
+
+interface CreepMemory {
+  creepType: CreepType | undefined;
+}
+
+interface Creep {
+  creepType(): CreepType | undefined;
+  create(type: CreepType): Creep;
+  setup(...args: any[]): this;
 }
