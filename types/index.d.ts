@@ -1,3 +1,8 @@
+declare abstract class Serializable {
+  public abstract serialize(): string;
+  public abstract deserialize(_serialized: string): this;
+}
+
 declare enum RoomLifeCycleStatus {
   Unowned = -1,
   Startup = 0,
@@ -32,22 +37,28 @@ declare enum CreepState {
 
 interface Creep {
   getCreepState(): CreepState;
+  execute(): void;
 }
 
-interface BuildRequest {
+interface PriorityRequest {
   priority: number;
 }
 
-interface ICreepSpawnRequest extends BuildRequest {
-  type: CreepType;
+interface ICreepSpawnRequest extends PriorityRequest, Serializable {
+  type: CreepType | null;
 }
 
 declare enum SPAWN_REQUEST_RESPONSE {
-  ADDED_TO_QUEUE = 0,
-  ERR_REJECTED_QUEUE_FULL = -1
+  ADDED_TO_QUEUE,
+  ERR_NO_PRIORITY,
+  ERR_REJECTED_QUEUE_FULL
+}
+
+interface SpawnMemory {
+  spawnQueue: { size: number; queue?: string };
 }
 
 interface StructureSpawn {
-  spawnRequestQueue(): BuildRequest[];
+  spawnRequestQueue(): PriorityRequest[];
   addSpawnRequest(request: ICreepSpawnRequest): SPAWN_REQUEST_RESPONSE;
 }
