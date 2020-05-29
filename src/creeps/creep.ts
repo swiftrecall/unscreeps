@@ -1,13 +1,10 @@
 import { HarvesterCreep } from './harvester';
+import { ID } from '../util';
 
-function generateID() {
-    return Math.random().toString(36).substr(2, 9);
-}
-
-Creep.prototype.create = function(type: CreepType) {
+Creep.prototype.create = function(type: CreepRole) {
     switch (type) {
-        case CreepType.Harvester:
-            return new HarvesterCreep(`harvester${generateID()}` as Id<Creep>);
+        case CreepRole.Harvester:
+            return new HarvesterCreep(`harvester${ID()}` as Id<Creep>);
     }
 }
 

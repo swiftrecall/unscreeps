@@ -4,3 +4,8 @@ declare abstract class Serializable {
 }
 
 type Nullable<T> = T | null | undefined;
+
+
+interface Memory {
+  colonies: {[name: string]: ColonyMemory}
+}

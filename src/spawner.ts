@@ -1,6 +1,8 @@
+export class Spawners {}
+
 export class CreepSpawnRequest extends Serializable
   implements Partial<ICreepSpawnRequest> {
-  public type: CreepType | null = null;
+  public type: CreepRole | null = null;
   public priority: number = -1;
 
   constructor(

@@ -5,7 +5,7 @@ interface PriorityRequest {
   }
   
   interface ICreepSpawnRequest extends PriorityRequest, Serializable {
-    type: CreepType | null;
+    type: CreepRole | null;
   }
   
   declare enum SPAWN_REQUEST_RESPONSE {
