@@ -1,6 +1,7 @@
 import { CreepState, CreepRole } from './creep';
 import { ID } from '../util';
-export class UpgraderCreep extends Creep {}
+
+// export class UpgraderCreep extends Creep {}
 
 export function SpawnUpgraderCreep(
   spawner: StructureSpawn,
@@ -10,18 +11,27 @@ export function SpawnUpgraderCreep(
   let name = `upg_${ID()}`;
   spawnOpts.memory = { ...spawnOpts.memory, role: CreepRole.Upgrader };
   let attempt = 0;
+  let spawnReturnCode: ScreepsReturnCode;
   while (
-    spawner.spawnCreep(spawnRequest.body, name, spawnOpts) === ERR_NAME_EXISTS
+    (spawnReturnCode = spawner.spawnCreep(
+      spawnRequest.body,
+      name,
+      spawnOpts
+    )) === ERR_NAME_EXISTS
   ) {
     if (++attempt > 10) {
       return ERR_NAME_EXISTS;
     }
     name = `harv_${ID}`;
   }
-  return OK;
+  return spawnReturnCode;
 }
 
-export function ExecuteUpgraderCreep(creep: UpgraderCreep): void {
+/**
+ *
+ * @param creep
+ */
+export function UpgraderCreep(creep: Creep): void {
   switch (creep.memory.state) {
     case CreepState.Harvesting:
       if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {

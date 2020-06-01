@@ -17,7 +17,10 @@
   },
   "homepage": "https://github.com/swiftrecall/unscreeps#readme",
   "devDependencies": {
+    "@types/lodash": "^4.14.154",
     "@types/screeps": "^3.1.2",
+    "grunt": "^1.1.0",
+    "grunt-screeps": "^1.4.0",
     "typescript": "^3.9.3"
   }
 }

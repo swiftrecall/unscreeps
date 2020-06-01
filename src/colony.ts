@@ -1,16 +1,9 @@
-import { Spawners, SpawnRequestQueue, CreepSpawnRequest } from './spawner';
+import { SpawnRequestQueue, CreepSpawnRequest } from './spawner';
 import { ID } from './util';
-import {
-  HarvesterCreep,
-  spawnHarvesterCreep,
-  ExecuteHarvesterCreep
-} from './creeps/harvester';
+import { spawnHarvesterCreep, HarvesterCreep } from './creeps/harvester';
 import { CreepRole, CreepState } from './creeps/creep';
-import {
-  UpgraderCreep,
-  SpawnUpgraderCreep,
-  ExecuteUpgraderCreep
-} from './creeps/upgrader';
+import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
+import { BuilderCreep, ConstructionDirective } from './creeps/builder';
 
 export interface ColonyMemory extends IColonyMemory {
   outposts: string[];
@@ -20,6 +13,7 @@ export interface ColonyMemory extends IColonyMemory {
   spawnRequestQueue?: string;
   sources?: string[];
   controllers?: string[];
+  constructionOrders?: ConstructionDirective[];
 }
 
 interface ISpawners {}
@@ -32,10 +26,15 @@ interface IColony {
 }
 
 enum ColonyState {
-  Bootstrap
+  /**
+   * Goals:
+   *    - get basic agriculture setup
+   *    - start upgrading
+   */
+  Bootstrap,
+  Established,
+  Expansion
 }
-
-interface ColonyCache extends Partial<IColony> {}
 
 function BootstrapColonyMemory(): ColonyMemory {
   return {
@@ -51,15 +50,20 @@ export class Colony implements IColony {
   room: Room;
   outposts: Room[];
 
-  // cachable values that are only set as needed
-  // TODO: revisit if necessary
   spawners: StructureSpawn[];
   creeps: Creep[];
-  creepsByRole: { [role: number]: Creep[] };
+  creepsByRole: { [role: number]: Creep[] } = {
+    [CreepRole.Harvester]: [],
+    [CreepRole.Upgrader]: [],
+    [CreepRole.Builder]: []
+  };
+  completedBuilders: Creep[];
   state: ColonyState;
   spawnRequestQueue: SpawnRequestQueue;
   sources: Source[];
   controllers: StructureController[];
+  extensions: StructureExtension[];
+  constructionOrders: ConstructionDirective[];
 
   constructor(roomName: string) {
     this.colonyName = roomName;
@@ -71,8 +75,13 @@ export class Colony implements IColony {
   }
 
   private init(): void {
+    // outposts
     this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
+
+    // state
     this.state = this.memory.state;
+
+    // spawners
     if (this.memory.spawners) {
       this.spawners = this.memory.spawners
         .map((spawnName) => Game.spawns[spawnName])
@@ -83,6 +92,8 @@ export class Colony implements IColony {
       }) as StructureSpawn[];
       this.memory.spawners = this.spawners.map((spawner) => spawner.id);
     }
+
+    // spawnRequestQueue
     if (this.memory.spawnRequestQueue) {
       this.spawnRequestQueue = SpawnRequestQueue.deserialize(
         this.memory.spawnRequestQueue
@@ -90,49 +101,47 @@ export class Colony implements IColony {
     } else {
       this.spawnRequestQueue = new SpawnRequestQueue();
     }
+
+    // sources
     if (this.memory.sources) {
       this.sources = this.memory.sources.map((id) => Game.getObjectById(id));
     } else {
       this.sources = this.room.find(FIND_SOURCES);
       this.memory.sources = this.sources.map((source) => source.id);
     }
+
+    // creepsByRole
     if (this.memory.creepsByRole) {
-      this.creepsByRole = {
-        [CreepRole.Harvester]: [],
-        [CreepRole.Upgrader]: []
-      };
       this.room.find(FIND_MY_CREEPS).forEach((creep) => {
         switch (creep.memory.role) {
           case CreepRole.Harvester:
-            this.creepsByRole[creep.memory.role].push(
-              new HarvesterCreep(creep.id)
-            );
+            this.creepsByRole[creep.memory.role].push(new Creep(creep.id));
             break;
           case CreepRole.Upgrader:
-            this.creepsByRole[creep.memory.role].push(
-              new UpgraderCreep(creep.id)
-            );
+            this.creepsByRole[creep.memory.role].push(new Creep(creep.id));
+            break;
+          case CreepRole.Builder:
+            const c = new Creep(creep.id);
+            const len = this.creepsByRole[creep.memory.role].push(c);
+            if (
+              this.creepsByRole[creep.memory.role][len - 1].memory.state ===
+              CreepState.Complete
+            ) {
+              this.completedBuilders.push(c);
+            }
             break;
           default:
             break;
         }
       });
-    } else {
-      this.memory.creepsByRole = {
-        [CreepRole.Harvester]: [],
-        [CreepRole.Upgrader]: []
-      };
-      this.creepsByRole = {
-        [CreepRole.Harvester]: [],
-        [CreepRole.Upgrader]: []
-      };
     }
+
+    // controllers
     if (this.memory.controllers) {
       this.controllers = this.memory.controllers.map((controller) =>
         Game.getObjectById(controller)
       );
     } else {
-      // find controller
       this.controllers = this.room.find(FIND_STRUCTURES, {
         filter: { structureType: STRUCTURE_CONTROLLER }
       }) as StructureController[];
@@ -145,7 +154,8 @@ export class Colony implements IColony {
   public run(): void {
     switch (this.state) {
       case ColonyState.Bootstrap:
-        // TODO: abstract build decisions
+        // TODO: abstract spawn decisions
+        // need to evaluate based on number on active creeps doing task
         if (!this.spawnRequestQueue.hasNext()) {
           if (this.creepsByRole[CreepRole.Harvester].length < 2) {
             this.spawnRequestQueue.push(
@@ -236,6 +246,8 @@ export class Colony implements IColony {
                   }
                 }
                 break;
+              case CreepRole.Builder:
+                break;
               default:
                 console.log('Creep role not recognized');
             }
@@ -254,12 +266,17 @@ export class Colony implements IColony {
       switch (Number(role)) {
         case CreepRole.Harvester:
           creeps.forEach((creep) => {
-            ExecuteHarvesterCreep(creep);
+            HarvesterCreep(creep);
           });
           break;
         case CreepRole.Upgrader:
           creeps.forEach((creep) => {
-            ExecuteUpgraderCreep(creep);
+            UpgraderCreep(creep);
+          });
+          break;
+        case CreepRole.Builder:
+          creeps.forEach((creep) => {
+            BuilderCreep(creep);
           });
           break;
         default:

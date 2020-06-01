@@ -1,9 +1,7 @@
-import { HarvesterCreep } from './harvester';
-import { ID } from '../util';
-
 export enum CreepRole {
   Harvester,
-  Upgrader
+  Upgrader,
+  Builder
 }
 
 export function getCreepRoleName(role): string {
@@ -12,6 +10,8 @@ export function getCreepRoleName(role): string {
       return 'Harvester';
     case CreepRole.Upgrader:
       return 'Upgrader';
+    case CreepRole.Builder:
+      return 'Builder';
     default:
       return 'Unknown';
   }
@@ -22,5 +22,6 @@ export enum CreepState {
   Flee,
   Fighting,
   Harvesting,
-  Delivering
+  Delivering,
+  Complete
 }
