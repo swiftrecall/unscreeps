@@ -1,22 +1,13 @@
 
-declare enum CreepRole {
-    Harvester
-}
-
-declare enum CreepState {
-    Normal = 0,
-    Flee = 1,
-    Fighting = 2
-}
 
 interface CreepMemory {
-    creepType: CreepRole | undefined;
+    role: any;
+    state: any,
+    source: Id<Source>,
+    target: Id<StructureSpawn>
 }
 
+
 interface Creep {
-    getCreepState(): CreepState;
-    execute(): void;
-    creepType(): CreepRole | undefined;
-    create(type: CreepRole): Creep | undefined;
-    setup(...args: any[]): this;
+    execute(creep?): void;
 }

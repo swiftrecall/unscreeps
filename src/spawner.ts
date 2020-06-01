@@ -1,30 +1,43 @@
-export class Spawners {}
+import { getCreepRoleName } from './creep';
+export class Spawners {
+  private spawnRequests: SpawnRequestQueue;
+  private spawns: StructureSpawn[];
+  constructor() {}
+}
 
-export class CreepSpawnRequest extends Serializable
+export enum SPAWN_REQUEST_RESPONSE {
+  ADDED_TO_QUEUE,
+  ERR_NO_PRIORITY,
+  ERR_REJECTED_QUEUE_FULL
+}
+
+export class CreepSpawnRequest
   implements Partial<ICreepSpawnRequest> {
-  public type: CreepRole | null = null;
+  public type: any = null;
+  public body: BodyPartConstant[] = null;
   public priority: number = -1;
 
   constructor(
-    opts: Partial<ICreepSpawnRequest> & { serialized?: string } = {}
+    {serialized, type, priority, body}: Partial<ICreepSpawnRequest> & { serialized?: string } = {}
   ) {
-    super();
-    if (opts.serialized) {
-      this.deserialize(opts.serialized);
+    if (serialized) {
+      this.deserialize(serialized);
     } else {
-      this.type = opts.type ?? null;
-      this.priority = opts.priority ?? -1;
+      this.type = type ?? null;
+      this.priority = priority ?? -1;
+      this.body = body ?? null;
     }
   }
 
   public serialize(): string {
-    return `${this.priority},${this.type}`;
+    return `${this.priority};${this.type};${this.body.join(',')}`;
   }
 
   public deserialize(_serialized: string): this {
-    const [priority, type] = _serialized.split(',');
+    const [priority, type, body] = _serialized.split(';');
     this.priority = Number(priority);
     this.type = Number(type);
+    this.body = body.split(',') as BodyPartConstant[];
     return this;
   }
 }
@@ -35,13 +48,12 @@ export class CreepSpawnRequest extends Serializable
  *      - Some sort of resource lock (priority-based) so soon-to-happen build/spawn orders can be met
  */
 
-export class SpawnRequestQueue extends Serializable {
+export class SpawnRequestQueue {
   private queue: ICreepSpawnRequest[];
 
   static MAX_SIZE: number = 5;
 
   constructor(buildRequests: ICreepSpawnRequest[] = []) {
-    super();
     this.queue = buildRequests;
   }
 
@@ -71,6 +83,22 @@ export class SpawnRequestQueue extends Serializable {
     } else {
       return this.queue.shift();
     }
+  }
+
+  public shift(spawnRequest: ICreepSpawnRequest): SPAWN_REQUEST_RESPONSE {
+    if (this.queue.length >= SpawnRequestQueue.MAX_SIZE) {
+      console.log("Shifting onto filled queue. TODO: implement restructuring?");
+    }
+    this.queue.unshift(spawnRequest);
+    return SPAWN_REQUEST_RESPONSE.ADDED_TO_QUEUE;
+  }
+
+  public peek(): ICreepSpawnRequest {
+    return this.queue[0];
+  }
+
+  public hasNext(): boolean {
+    return this.queue.length !== 0;
   }
 
   /**
@@ -120,14 +148,21 @@ export class SpawnRequestQueue extends Serializable {
     );
     return this;
   }
+
+  public print(): void {
+    console.log('Spawn Request Queue:');
+    this.queue.forEach((value) => {
+      console.log(`\t${getCreepRoleName(value.type)} - ${value.priority}`);
+    })
+  }
 }
 
-StructureSpawn.prototype.addSpawnRequest = function (request: PriorityRequest) {
-  if (!this.memory.spawnQueue) {
-    this.memory.spawnQueue = { size: 0 };
-  }
-  if (this.memory.spawnQueue.size === SpawnRequestQueue.MAX_SIZE) {
-    return SPAWN_REQUEST_RESPONSE.ERR_REJECTED_QUEUE_FULL;
-  }
-  return SPAWN_REQUEST_RESPONSE.ADDED_TO_QUEUE;
-};
+// StructureSpawn.prototype.addSpawnRequest = function (request: PriorityRequest) {
+//   if (!this.memory.spawnQueue) {
+//     this.memory.spawnQueue = { size: 0 };
+//   }
+//   if (this.memory.spawnQueue.size === SpawnRequestQueue.MAX_SIZE) {
+//     return SPAWN_REQUEST_RESPONSE.ERR_REJECTED_QUEUE_FULL;
+//   }
+//   return SPAWN_REQUEST_RESPONSE.ADDED_TO_QUEUE;
+// };
