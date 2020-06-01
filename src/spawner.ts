@@ -1,4 +1,4 @@
-import { getCreepRoleName } from './creep';
+import { getCreepRoleName } from './creeps/creep';
 export class Spawners {
   private spawnRequests: SpawnRequestQueue;
   private spawns: StructureSpawn[];
@@ -11,15 +11,17 @@ export enum SPAWN_REQUEST_RESPONSE {
   ERR_REJECTED_QUEUE_FULL
 }
 
-export class CreepSpawnRequest
-  implements Partial<ICreepSpawnRequest> {
+export class CreepSpawnRequest implements Partial<ICreepSpawnRequest> {
   public type: any = null;
   public body: BodyPartConstant[] = null;
   public priority: number = -1;
 
-  constructor(
-    {serialized, type, priority, body}: Partial<ICreepSpawnRequest> & { serialized?: string } = {}
-  ) {
+  constructor({
+    serialized,
+    type,
+    priority,
+    body
+  }: Partial<ICreepSpawnRequest> & { serialized?: string } = {}) {
     if (serialized) {
       this.deserialize(serialized);
     } else {
@@ -87,7 +89,7 @@ export class SpawnRequestQueue {
 
   public shift(spawnRequest: ICreepSpawnRequest): SPAWN_REQUEST_RESPONSE {
     if (this.queue.length >= SpawnRequestQueue.MAX_SIZE) {
-      console.log("Shifting onto filled queue. TODO: implement restructuring?");
+      console.log('Shifting onto filled queue. TODO: implement restructuring?');
     }
     this.queue.unshift(spawnRequest);
     return SPAWN_REQUEST_RESPONSE.ADDED_TO_QUEUE;
@@ -153,7 +155,7 @@ export class SpawnRequestQueue {
     console.log('Spawn Request Queue:');
     this.queue.forEach((value) => {
       console.log(`\t${getCreepRoleName(value.type)} - ${value.priority}`);
-    })
+    });
   }
 }
 
