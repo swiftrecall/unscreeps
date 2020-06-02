@@ -18,7 +18,10 @@ export class ConstructionDirective {
 
   static deserialize(serialized: string): ConstructionDirective {
     const [id, workers] = serialized.split(';');
-    return new ConstructionDirective(id as Id<ConstructionSite>, workers.split(','));
+    return new ConstructionDirective(
+      id as Id<ConstructionSite>,
+      workers.split(',')
+    );
   }
 }
 
@@ -74,28 +77,30 @@ export function BuilderCreep(creep: Creep): void {
         }
         break;
       }
-      // if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
-      //   creep.memory.state = CreepState.Delivering;
-      // } else {
-      //   const source = Game.getObjectById(creep.memory.source as unknown as Id<StructureSpawn>);
-      //   if (!source) {
-      //     console.log(`Creep ${creep.id} source cannot be found`);
-      //     creep.memory.state = CreepState.Complete;
-      //   } else {
-      //     const withdrawResult = creep.withdraw(source, RESOURCE_ENERGY);
-      //     console.log('builder withdraw result:', withdrawResult);
-      //     if (withdrawResult === ERR_NOT_IN_RANGE) {
-      //       creep.moveTo(source, { visualizePathStyle: CreepPathVisualization} as MoveToOpts);
-      //     }
-      //   }
-      //   break;
-      // }
+    // if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
+    //   creep.memory.state = CreepState.Delivering;
+    // } else {
+    //   const source = Game.getObjectById(creep.memory.source as unknown as Id<StructureSpawn>);
+    //   if (!source) {
+    //     console.log(`Creep ${creep.id} source cannot be found`);
+    //     creep.memory.state = CreepState.Complete;
+    //   } else {
+    //     const withdrawResult = creep.withdraw(source, RESOURCE_ENERGY);
+    //     console.log('builder withdraw result:', withdrawResult);
+    //     if (withdrawResult === ERR_NOT_IN_RANGE) {
+    //       creep.moveTo(source, { visualizePathStyle: CreepPathVisualization} as MoveToOpts);
+    //     }
+    //   }
+    //   break;
+    // }
     case CreepState.Delivering:
       if (creep.store[RESOURCE_ENERGY] === 0) {
         // move to source
         creep.memory.state = CreepState.Harvesting;
       } else {
-        const target = Game.getObjectById(creep.memory.target as unknown as Id<ConstructionSite>);
+        const target = Game.getObjectById(
+          (creep.memory.target as unknown) as Id<ConstructionSite>
+        );
         if (!target) {
           console.log(`Creep ${creep.id} has no contruction site`);
           creep.memory.target = null;
@@ -106,7 +111,9 @@ export function BuilderCreep(creep: Creep): void {
           if (buildResult === ERR_NOT_ENOUGH_RESOURCES) {
             creep.memory.state = CreepState.Harvesting;
           } else if (buildResult === ERR_NOT_IN_RANGE) {
-            creep.moveTo(target, {visualizePathStyle: CreepPathVisualization} as MoveToOpts);
+            creep.moveTo(target, {
+              visualizePathStyle: CreepPathVisualization
+            } as MoveToOpts);
           }
         }
       }
@@ -116,6 +123,4 @@ export function BuilderCreep(creep: Creep): void {
   }
 }
 
-export function BuilderCreepAssign(creep: Creep) {
-  
-}
+export function BuilderCreepAssign(creep: Creep) {}
