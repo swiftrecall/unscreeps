@@ -3,7 +3,7 @@ import { ID } from './util';
 import { spawnHarvesterCreep, HarvesterCreep } from './creeps/harvester';
 import { CreepRole, CreepState } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
-import { BuilderCreep, ConstructionDirective } from './creeps/builder';
+import { BuilderCreep, ConstructionDirective, SpawnBuilderCreep } from './creeps/builder';
 
 export interface ColonyMemory extends IColonyMemory {
   outposts: string[];
@@ -13,7 +13,8 @@ export interface ColonyMemory extends IColonyMemory {
   spawnRequestQueue?: string;
   sources?: string[];
   controllers?: string[];
-  constructionOrders?: ConstructionDirective[];
+  constructionOrders?: string[];
+  extensions?: string[];
 }
 
 interface ISpawners {}
@@ -57,13 +58,13 @@ export class Colony implements IColony {
     [CreepRole.Upgrader]: [],
     [CreepRole.Builder]: []
   };
-  completedBuilders: Creep[];
+  completedBuilders: Creep[] = [];
   state: ColonyState;
   spawnRequestQueue: SpawnRequestQueue;
   sources: Source[];
   controllers: StructureController[];
-  extensions: StructureExtension[];
-  constructionOrders: ConstructionDirective[];
+  extensions: StructureExtension[] = [];
+  constructionOrders: ConstructionDirective[] = [];
 
   constructor(roomName: string) {
     this.colonyName = roomName;
@@ -75,6 +76,7 @@ export class Colony implements IColony {
   }
 
   private init(): void {
+    console.log('INIT');
     // outposts
     this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
 
@@ -82,16 +84,19 @@ export class Colony implements IColony {
     this.state = this.memory.state;
 
     // spawners
-    if (this.memory.spawners) {
-      this.spawners = this.memory.spawners
-        .map((spawnName) => Game.spawns[spawnName])
-        .filter((spawn) => spawn != null);
-    } else {
+    // if (this.memory.spawners) {
+    //   console.log('memory spawners');
+    //   this.spawners = this.memory.spawners
+    //     .map((spawnName) => Game.spawns[spawnName])
+    //     .filter((spawn) => spawn != null);
+    // } else {
+      console.log('finding spawners');
       this.spawners = this.room.find(FIND_STRUCTURES, {
         filter: (structure) => structure.structureType === STRUCTURE_SPAWN
       }) as StructureSpawn[];
       this.memory.spawners = this.spawners.map((spawner) => spawner.id);
-    }
+    // }
+    console.log('found spawners:', this.spawners.length);
 
     // spawnRequestQueue
     if (this.memory.spawnRequestQueue) {
@@ -149,11 +154,46 @@ export class Colony implements IColony {
         (controller) => controller.id
       );
     }
+
+    // if (this.memory.constructionOrders != null) {
+    //   this.constructionOrders = this.memory.constructionOrders.map((serialized: string) => ConstructionDirective.deserialize(serialized));
+    // } else {
+      this.constructionOrders = this.room.find(FIND_CONSTRUCTION_SITES).map((site) => new ConstructionDirective(site.id));
+    // }
+
+    if (this.memory.extensions) {
+      this.extensions = this.memory.extensions.map((id: string) => Game.getObjectById(id));
+    }
   }
 
   public run(): void {
+    console.log('RUN');
     switch (this.state) {
       case ColonyState.Bootstrap:
+
+        // Building Orders
+        // TODO: add extension build need
+        if (this.extensions.length < 5) {
+          // create new construction site
+          const spawnerPos = this.spawners[0].pos;
+
+          const extensions1 = new RoomPosition(spawnerPos.x, spawnerPos.y + 2, this.room.name);
+          const extensions2 = new RoomPosition(spawnerPos.x, spawnerPos.y - 2, this.room.name);
+          const extensions3 = new RoomPosition(spawnerPos.x + 2, spawnerPos.y, this.room.name);
+          const extensions4 = new RoomPosition(spawnerPos.x - 2, spawnerPos.y, this.room.name);
+
+          extensions1.createConstructionSite(STRUCTURE_EXTENSION);
+          extensions2.createConstructionSite(STRUCTURE_EXTENSION);
+          extensions3.createConstructionSite(STRUCTURE_EXTENSION);
+          extensions4.createConstructionSite(STRUCTURE_EXTENSION);
+
+          const constructionSites: LookForAtAreaResultArray<ConstructionSite, LOOK_CONSTRUCTION_SITES> = this.room.lookForAtArea(LOOK_CONSTRUCTION_SITES, spawnerPos.y + 2, spawnerPos.x - 2, spawnerPos.y - 2, spawnerPos.x + 2, true);
+          constructionSites.forEach((value) => {
+            this.constructionOrders.push(new ConstructionDirective(value.constructionSite.id));
+          });
+        }
+
+        // Spawning Orders
         // TODO: abstract spawn decisions
         // need to evaluate based on number on active creeps doing task
         if (!this.spawnRequestQueue.hasNext()) {
@@ -175,7 +215,16 @@ export class Colony implements IColony {
               })
             );
           }
+          if (this.creepsByRole[CreepRole.Builder].length < 1) {
+            this.spawnRequestQueue.push(new CreepSpawnRequest({
+              type: CreepRole.Builder,
+              priority: 0,
+              body: [WORK, MOVE, MOVE, CARRY, CARRY]
+            }));
+          }
         }
+
+        // RUN
         this.runBootstrapState();
         break;
       default:
@@ -225,7 +274,6 @@ export class Colony implements IColony {
                 }
                 break;
               case CreepRole.Upgrader:
-                // TODO: need room controller
                 const upg_returnCode = SpawnUpgraderCreep(
                   spawn,
                   this.spawnRequestQueue.peek(),
@@ -237,16 +285,16 @@ export class Colony implements IColony {
                     } as unknown) as CreepMemory
                   }
                 );
+                // TODO: feedback on spawn attempt
                 if (upg_returnCode === OK) {
                   this.spawnRequestQueue.pop();
-                  if (spawn.spawning) {
-                    this.memory.creepsByRole[CreepRole.Upgrader].push(
-                      spawn.spawning.name
-                    );
-                  }
                 }
                 break;
               case CreepRole.Builder:
+                const build_returnCode = SpawnBuilderCreep(spawn, this.spawnRequestQueue.peek(), { memory: { state: CreepState.Complete, source: this.sources[1].id, target: null} as unknown as CreepMemory});
+                if (build_returnCode === OK) {
+                  this.spawnRequestQueue.pop();
+                }
                 break;
               default:
                 console.log('Creep role not recognized');
@@ -261,7 +309,24 @@ export class Colony implements IColony {
         console.log('spawn is apparently undefined');
       }
     });
-    console.log(`Creeps by role: ${JSON.stringify(this.creepsByRole)}`);
+    // console.log(`Creeps by role: ${JSON.stringify(this.creepsByRole)}`);
+
+    // TODO: make it so this loop doesn't have to be done every time
+    let j: number = 0;
+    console.log('constructionOrders:', this.constructionOrders.length);
+    console.log('completedBuilders:', this.completedBuilders.length);
+    for (let i = 0; j < this.constructionOrders.length && i < this.completedBuilders.length; i++) {
+      for (; j < this.constructionOrders.length;) {
+        if (this.constructionOrders[j].assignedWorkers.length < 1) {
+          console.log('assigning build', this.completedBuilders[i].id, this.constructionOrders[j].site.id);
+          this.constructionOrders[j].assignedWorkers.push(this.completedBuilders[i].id);
+          this.completedBuilders[i].memory.state = CreepState.Harvesting;
+          j++;
+          break;
+        }
+      }
+    }
+
     Object.entries(this.creepsByRole).forEach(([role, creeps]) => {
       switch (Number(role)) {
         case CreepRole.Harvester:
@@ -276,6 +341,7 @@ export class Colony implements IColony {
           break;
         case CreepRole.Builder:
           creeps.forEach((creep) => {
+            console.log('Running builder:', creep.id);
             BuilderCreep(creep);
           });
           break;
@@ -287,6 +353,7 @@ export class Colony implements IColony {
 
   public finish(): void {
     this.memory.spawnRequestQueue = this.spawnRequestQueue.serialize();
+    this.memory.constructionOrders = this.constructionOrders.map((directive) => ConstructionDirective.serialize(directive));
     Object.entries(this.creepsByRole).forEach(
       ([role, creeps]) =>
         (this.memory.creepsByRole[role] = creeps.map((creep) => creep.id))

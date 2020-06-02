@@ -1,23 +1,24 @@
 import { ID } from '../util';
-import { CreepRole } from './creep';
-
-export class ConstructionDirectives {
-  static deserialize(serialized: string): ConstructionDirectives[] {
-    throw new Error('Method not implemented');
-  }
-  static serialize(directives: ConstructionDirectives[]): string {
-    throw new Error('Method not implemented');
-  }
-}
+import { CreepRole, CreepState, CreepPathVisualization } from './creep';
 
 /**
  * Need way to dynamically set where they should pull their materials from
  */
 export class ConstructionDirective {
   public site: ConstructionSite;
-  public assignedWorkers: Creep[];
-  constructor(id: Id<ConstructionSite>) {
+  public assignedWorkers: string[];
+  constructor(id: Id<ConstructionSite>, workers: string[] = []) {
     this.site = Game.getObjectById(id);
+    this.assignedWorkers = workers;
+  }
+
+  static serialize(directive: ConstructionDirective): string {
+    return `${directive.site};${directive.assignedWorkers.join(',')}`;
+  }
+
+  static deserialize(serialized: string): ConstructionDirective {
+    const [id, workers] = serialized.split(';');
+    return new ConstructionDirective(id as Id<ConstructionSite>, workers.split(','));
   }
 }
 
@@ -45,4 +46,76 @@ export function SpawnBuilderCreep(
   return spawnReturnCode;
 }
 
-export function BuilderCreep(creep: Creep): void {}
+export function BuilderCreep(creep: Creep): void {
+  console.log('builder state:', creep.memory.state);
+  switch (creep.memory.state) {
+    case CreepState.Harvesting:
+      if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
+        creep.memory.state = CreepState.Delivering;
+      } else {
+        const source = Game.getObjectById(creep.memory.source);
+        if (!source) {
+          console.log(`Creep ${creep.id} source cannot be found`);
+        } else {
+          const harvestResult = creep.harvest(source);
+          if (harvestResult === ERR_NOT_IN_RANGE) {
+            creep.moveTo(source, {
+              visualizePathStyle: {
+                fill: 'transparent',
+                stroke: '#fff',
+                lineStyle: 'dashed',
+                strokeWidth: 0.15,
+                opacity: 0.1
+              }
+            });
+          } else if (harvestResult === ERR_INVALID_TARGET) {
+            creep.memory.state = CreepState.Complete;
+          }
+        }
+        break;
+      }
+      // if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
+      //   creep.memory.state = CreepState.Delivering;
+      // } else {
+      //   const source = Game.getObjectById(creep.memory.source as unknown as Id<StructureSpawn>);
+      //   if (!source) {
+      //     console.log(`Creep ${creep.id} source cannot be found`);
+      //     creep.memory.state = CreepState.Complete;
+      //   } else {
+      //     const withdrawResult = creep.withdraw(source, RESOURCE_ENERGY);
+      //     console.log('builder withdraw result:', withdrawResult);
+      //     if (withdrawResult === ERR_NOT_IN_RANGE) {
+      //       creep.moveTo(source, { visualizePathStyle: CreepPathVisualization} as MoveToOpts);
+      //     }
+      //   }
+      //   break;
+      // }
+    case CreepState.Delivering:
+      if (creep.store[RESOURCE_ENERGY] === 0) {
+        // move to source
+        creep.memory.state = CreepState.Harvesting;
+      } else {
+        const target = Game.getObjectById(creep.memory.target as unknown as Id<ConstructionSite>);
+        if (!target) {
+          console.log(`Creep ${creep.id} has no contruction site`);
+          creep.memory.target = null;
+          creep.memory.state = CreepState.Complete;
+        } else {
+          const buildResult = creep.build(target);
+          console.log('builder build result:', buildResult);
+          if (buildResult === ERR_NOT_ENOUGH_RESOURCES) {
+            creep.memory.state = CreepState.Harvesting;
+          } else if (buildResult === ERR_NOT_IN_RANGE) {
+            creep.moveTo(target, {visualizePathStyle: CreepPathVisualization} as MoveToOpts);
+          }
+        }
+      }
+      break;
+    default:
+      console.log(`Creep: ${creep.id} has no state`);
+  }
+}
+
+export function BuilderCreepAssign(creep: Creep) {
+  
+}

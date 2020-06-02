@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "es2017",
-    "module": "commonjs",
-    "outDir": "./dist",
+    "module": "esnext",
+    "moduleResolution": "Node",
     "rootDir": "./src",
     "removeComments": true,
     "strict": false,

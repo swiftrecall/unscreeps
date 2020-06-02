@@ -25,3 +25,11 @@ export enum CreepState {
   Delivering,
   Complete
 }
+
+export const CreepPathVisualization = {
+  fill: 'transparent',
+  stroke: '#fff',
+  lineStyle: 'dashed',
+  strokeWidth: 0.15,
+  opacity: 0.1
+};
