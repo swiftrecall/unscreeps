@@ -1,5 +1,5 @@
 import { ID } from '../util';
-import { CreepState, CreepRole } from './creep';
+import { CreepState, CreepRole, CreepPathVisualization } from './creep';
 
 // export class HarvesterCreep extends Creep {
 //   execute(creep?): void {
@@ -42,6 +42,8 @@ import { CreepState, CreepRole } from './creep';
 //   }
 // }
 
+export function HarvesterCreep_Move(creep: Creep): void {}
+
 /**
  * TODO: fix movement logic so once creeps get close enough but are blocked they don't recalculate their path
  */
@@ -58,13 +60,9 @@ export function HarvesterCreep(creep: Creep): void {
           const harvestResult = creep.harvest(source);
           if (harvestResult === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, {
-              visualizePathStyle: {
-                fill: 'transparent',
-                stroke: '#fff',
-                lineStyle: 'dashed',
-                strokeWidth: 0.15,
-                opacity: 0.1
-              }
+              maxOps: 500, // TODO: test what happens when maxOps is reached
+              range: 1,
+              visualizePathStyle: CreepPathVisualization
             });
           }
         }
@@ -81,13 +79,9 @@ export function HarvesterCreep(creep: Creep): void {
           const transferResult = creep.transfer(target, RESOURCE_ENERGY);
           if (transferResult === ERR_NOT_IN_RANGE) {
             creep.moveTo(target, {
-              visualizePathStyle: {
-                fill: 'transparent',
-                stroke: '#fff',
-                lineStyle: 'dashed',
-                strokeWidth: 0.15,
-                opacity: 0.1
-              }
+              maxOps: 500,
+              range: 1,
+              visualizePathStyle: CreepPathVisualization
             });
           }
         }

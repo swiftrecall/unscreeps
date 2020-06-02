@@ -2,6 +2,17 @@ import { ID } from '../util';
 import { CreepRole, CreepState, CreepPathVisualization } from './creep';
 
 /**
+ * Handles a rooms contruction projects
+ * Gets creeps assigned to it
+ * TODO: needs structure for requesting more creeps to be spawned
+ */
+export class ConstructionManager {
+  creeps: Creep[];
+  directives: ConstructionDirective[];
+  constructor(public room: Room) {}
+}
+
+/**
  * Need way to dynamically set where they should pull their materials from
  */
 export class ConstructionDirective {

@@ -55,8 +55,6 @@ export class Colony implements IColony {
   room: Room;
   outposts: Room[];
 
-  roomCostMatrix: CostMatrix;
-
   spawners: StructureSpawn[];
   creeps: Creep[];
   creepsByRole: { [role: number]: Creep[] } = {
@@ -89,19 +87,10 @@ export class Colony implements IColony {
     this.state = this.memory.state;
 
     // spawners
-    // if (this.memory.spawners) {
-    //   console.log('memory spawners');
-    //   this.spawners = this.memory.spawners
-    //     .map((spawnName) => Game.spawns[spawnName])
-    //     .filter((spawn) => spawn != null);
-    // } else {
-    console.log('finding spawners');
     this.spawners = this.room.find(FIND_STRUCTURES, {
       filter: (structure) => structure.structureType === STRUCTURE_SPAWN
     }) as StructureSpawn[];
-    this.memory.spawners = this.spawners.map((spawner) => spawner.id);
-    // }
-    console.log('found spawners:', this.spawners.length);
+    // this.memory.spawners = this.spawners.map((spawner) => spawner.id);
 
     // spawnRequestQueue
     if (this.memory.spawnRequestQueue) {

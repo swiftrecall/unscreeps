@@ -26,7 +26,7 @@ export enum CreepState {
   Complete
 }
 
-export const CreepPathVisualization = {
+export const CreepPathVisualization: PolyStyle = {
   fill: 'transparent',
   stroke: '#fff',
   lineStyle: 'dashed',
