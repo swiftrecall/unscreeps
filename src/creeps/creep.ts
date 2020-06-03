@@ -1,3 +1,5 @@
+import { log, error } from '../util';
+
 export enum CreepRole {
   Harvester,
   Upgrader,
@@ -33,3 +35,81 @@ export const CreepPathVisualization: PolyStyle = {
   strokeWidth: 0.15,
   opacity: 0.1
 };
+
+export interface ITask {}
+
+export abstract class _Creep extends Creep {
+  protected tasks: ITask[] = [];
+
+  constructor(id: Id<Creep>) {
+    super(id);
+  }
+
+  /**
+   * Allows creep to perform an neccessary pre-tick initalization
+   * TODO: this may just be able to be moved to the constructor... could allow for some state to be passed though in order to re-evaluate necessary actions
+   */
+  abstract setup(): void;
+
+  /**
+   * Execute the creeps assigned task
+   */
+  abstract execute(): boolean;
+
+  private checkRun(): boolean {
+    if (this.spawning) {
+      return false;
+    }
+
+    if (this.memory.recycle) {
+      // run recycle process
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Moves the creep along the assigned route.
+   * @param task {@link ITask} Task to execute once route is complete
+   */
+  private moveRoute(task: ITask): boolean {
+    return true;
+  }
+
+  public log(message: string): void {
+    // TODO: add debug configuration
+    log(`${this.name} ${message}`, 'Creep');
+  }
+
+  public run(): boolean {
+    if (!this.checkRun()) {
+      return;
+    }
+
+    try {
+      this.setup();
+
+      if (this.memory.routing && this.memory.routing.reached) {
+        this.execute();
+      }
+
+      if (!this.tasks.length) {
+        this.log('task list is empty');
+      }
+      if (this.moveRoute(this.tasks[0])) {
+        return true;
+      }
+    } catch (e) {
+      error(e, 'Creep');
+    } finally {
+      if (this.fatigue === 0) {
+        if (this.memory.lastPositions === undefined) {
+          this.memory.lastPositions = [];
+        }
+        this.memory.lastPositions.unshift(this.pos);
+        this.memory.lastPositions = this.memory.lastPositions.slice(0, 5);
+      }
+    }
+  }
+}

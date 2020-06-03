@@ -1,13 +1,16 @@
-
-
 interface CreepMemory {
-    role: any;
-    state: any,
-    source: Id<Source>,
-    target: Id<StructureSpawn>
+  // should be determinable by the class instance
+  role: any;
+  state: any;
+  routing: any;
+  recycle: boolean;
+  lastPositions?: RoomPosition[];
+
+  // TODO: remove
+  source: Id<Source>;
+  target: Id<StructureSpawn>;
 }
 
-
 interface Creep {
-    execute(creep?): void;
+  run(): void;
 }
