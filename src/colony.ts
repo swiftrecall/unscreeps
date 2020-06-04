@@ -1,6 +1,10 @@
 import { SpawnRequestQueue, CreepSpawnRequest } from './spawner';
 import { ID } from './util';
-import { spawnHarvesterCreep, HarvesterCreep } from './creeps/harvester';
+import {
+  spawnHarvesterCreep,
+  HarvesterCreep,
+  FHarvesterCreep
+} from './creeps/harvester';
 import { CreepRole, CreepState } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
 import {
@@ -378,7 +382,7 @@ export class Colony implements IColony {
       switch (Number(role)) {
         case CreepRole.Harvester:
           creeps.forEach((creep) => {
-            HarvesterCreep(creep);
+            FHarvesterCreep(creep);
           });
           break;
         case CreepRole.Upgrader:

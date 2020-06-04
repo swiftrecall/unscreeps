@@ -42,5 +42,20 @@ export function loop() {
     });
   }
 
-  printGameInfo('Loop End');
+  Object.values(Game.rooms).forEach((room) => {
+    if (room.commonCreepCostMatrix) {
+      console.log(`\n${room.name} - commonCreepCostMatrix`);
+      for (let y = 0; y < 50; y++) {
+        let row = ['\t|'];
+        for (let x = 0; x < 50; x++) {
+          row.push(String(room.commonCreepCostMatrix.get(x, y)));
+        }
+        row.push('|');
+        console.log(row.join(' '));
+      }
+      console.log();
+    }
+  });
+  // little test function -- Remve when actually running
+  for (let x = 0; x < 50; x) printGameInfo('Loop End');
 }

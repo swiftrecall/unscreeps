@@ -36,10 +36,26 @@ export const CreepPathVisualization: PolyStyle = {
   opacity: 0.1
 };
 
-export interface ITask {}
+export interface ITask {
+  action:
+    | 'transfer'
+    | 'harvest'
+    | 'withdraw'
+    | 'attack'
+    | 'repair'
+    | 'build'
+    | 'upgrade';
+  target?: Id<any>;
+  routing?: Routing;
+}
 
 export abstract class _Creep extends Creep {
-  protected tasks: ITask[] = [];
+  protected get tasks() {
+    return this.memory.tasks as ITask[];
+  }
+  protected set tasks(_tasks) {
+    this.memory.tasks = _tasks;
+  }
 
   constructor(id: Id<Creep>) {
     super(id);
@@ -73,7 +89,7 @@ export abstract class _Creep extends Creep {
    * Moves the creep along the assigned route.
    * @param task {@link ITask} Task to execute once route is complete
    */
-  private moveRoute(task: ITask): boolean {
+  public moveRoute(task?: ITask): boolean {
     return true;
   }
 
@@ -84,7 +100,7 @@ export abstract class _Creep extends Creep {
 
   public run(): boolean {
     if (!this.checkRun()) {
-      return;
+      return false;
     }
 
     try {
