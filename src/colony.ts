@@ -5,7 +5,7 @@ import {
   HarvesterCreep,
   FHarvesterCreep
 } from './creeps/harvester';
-import { CreepRole, CreepState } from './creeps/creep';
+import { CreepRole, CreepState, _Creep } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
 import {
   BuilderCreep,
@@ -59,20 +59,27 @@ export class Colony implements IColony {
   room: Room;
   outposts: Room[];
 
-  spawners: StructureSpawn[];
-  creeps: Creep[];
+  spawners: StructureSpawn[] = [];
+  controllers: StructureController[] = [];
+  extensions: StructureExtension[] = [];
+  sources: Source[] = [];
+
+  creeps: _Creep[];
   creepsByRole: { [role: number]: Creep[] } = {
     [CreepRole.Harvester]: [],
     [CreepRole.Upgrader]: [],
     [CreepRole.Builder]: []
   };
   completedBuilders: Creep[] = [];
-  state: ColonyState;
   spawnRequestQueue: SpawnRequestQueue;
-  sources: Source[];
-  controllers: StructureController[];
-  extensions: StructureExtension[] = [];
   constructionOrders: ConstructionDirective[] = [];
+
+  get state() {
+    return this.memory.state;
+  }
+  set state(_state) {
+    this.memory.state = _state;
+  }
 
   constructor(roomName: string) {
     this.colonyName = roomName;
@@ -80,96 +87,60 @@ export class Colony implements IColony {
     this.memory =
       (Memory.colonies[this.colonyName] as ColonyMemory) ||
       BootstrapColonyMemory();
-    this.init();
   }
 
   private init(): void {
     // outposts
-    this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
-
-    // state
-    this.state = this.memory.state;
+    // this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
 
     // spawners
-    this.spawners = this.room.find(FIND_STRUCTURES, {
-      filter: (structure) => structure.structureType === STRUCTURE_SPAWN
-    }) as StructureSpawn[];
-    // this.memory.spawners = this.spawners.map((spawner) => spawner.id);
+    this.spawners = [];
+    this.controllers = [];
+    this.room.find(FIND_MY_STRUCTURES).forEach((structure) => {
+      switch (structure.structureType) {
+        case STRUCTURE_SPAWN:
+          this.spawners.push(structure);
+          break;
 
-    // spawnRequestQueue
-    if (this.memory.spawnRequestQueue) {
-      this.spawnRequestQueue = SpawnRequestQueue.deserialize(
-        this.memory.spawnRequestQueue
-      );
-    } else {
-      this.spawnRequestQueue = new SpawnRequestQueue();
-    }
+        case STRUCTURE_CONTROLLER:
+          this.controllers.push(structure);
+          break;
 
-    // sources
-    if (this.memory.sources) {
-      this.sources = this.memory.sources.map((id) => Game.getObjectById(id));
-    } else {
-      this.sources = this.room.find(FIND_SOURCES);
-      this.memory.sources = this.sources.map((source) => source.id);
-    }
+        case STRUCTURE_EXTENSION:
+          this.extensions.push(structure);
+          break;
 
-    // creepsByRole
-    if (this.memory.creepsByRole) {
-      this.room.find(FIND_MY_CREEPS).forEach((creep) => {
-        switch (creep.memory.role) {
-          case CreepRole.Harvester:
-            this.creepsByRole[creep.memory.role].push(new Creep(creep.id));
-            break;
-          case CreepRole.Upgrader:
-            this.creepsByRole[creep.memory.role].push(new Creep(creep.id));
-            break;
-          case CreepRole.Builder:
-            const c = new Creep(creep.id);
-            const len = this.creepsByRole[creep.memory.role].push(c);
-            if (
-              this.creepsByRole[creep.memory.role][len - 1].memory.state ===
-              CreepState.Complete
-            ) {
-              this.completedBuilders.push(c);
-            }
-            break;
-          default:
-            break;
-        }
-      });
-    }
+        default:
+          break;
+      }
+    });
 
-    // controllers
-    if (this.memory.controllers) {
-      this.controllers = this.memory.controllers.map((controller) =>
-        Game.getObjectById(controller)
-      );
-    } else {
-      this.controllers = this.room.find(FIND_STRUCTURES, {
-        filter: { structureType: STRUCTURE_CONTROLLER }
-      }) as StructureController[];
-      this.memory.controllers = this.controllers.map(
-        (controller) => controller.id
-      );
-    }
+    this.sources = this.room.find(FIND_SOURCES);
 
-    // if (this.memory.constructionOrders != null) {
-    //   this.constructionOrders = this.memory.constructionOrders.map((serialized: string) => ConstructionDirective.deserialize(serialized));
-    // } else {
-    this.constructionOrders = this.room
-      .find(FIND_CONSTRUCTION_SITES)
-      .map((site) => new ConstructionDirective(site.id));
-    // }
+    this.creeps = this.room.find(FIND_MY_CREEPS).map((_creep) => {
+      switch (_creep.memory.role) {
+        case CreepRole.Harvester:
+          return new HarvesterCreep(_creep.id);
 
-    if (this.memory.extensions) {
-      this.extensions = this.memory.extensions.map((id: string) =>
-        Game.getObjectById(id)
-      );
-    }
+        default:
+          break;
+      }
+    });
+  }
+
+  public checkRun(): boolean {
+    // TODO: add functionality to skip runs to conserve cpu
+    return true;
   }
 
   public run(): void {
+    this.init();
     console.log('RUN');
+
+    this.creeps.forEach((creep: _Creep) => {
+      creep.run();
+    });
+
     switch (this.state) {
       case ColonyState.Bootstrap:
         // Building Orders

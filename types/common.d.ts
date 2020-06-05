@@ -1,10 +1,8 @@
-
 type Nullable<T> = T | null | undefined;
 
-interface IColonyMemory {
-
-}
+interface IColonyMemory {}
 
 interface Memory {
-  colonies: { [colonyName: string]: IColonyMemory}
+  colonies: { [colonyName: string]: IColonyMemory };
+  command: string;
 }

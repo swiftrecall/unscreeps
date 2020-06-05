@@ -1,5 +1,11 @@
 import { ID } from '../util';
-import { CreepState, CreepRole, CreepPathVisualization, _Creep } from './creep';
+import {
+  CreepState,
+  CreepRole,
+  CreepPathVisualization,
+  _Creep,
+  SetupCommonCreepCostMatrix
+} from './creep';
 
 export class HarvesterCreep extends _Creep {
   public get resource() {
@@ -12,103 +18,103 @@ export class HarvesterCreep extends _Creep {
     if (!this.tasks[0]) {
       // no tasks
       // TODO: handle? currently will just exit
-      this.log('No tasks available');
-      return true;
+      throw new Error('No tasks available');
     }
 
     const task = this.tasks[0];
 
-    if (task.action === 'transfer') {
-      const target = Game.getObjectById(
+    let target;
+
+    if (
+      task.action === 'transfer' ||
+      task.action === 'harvest' ||
+      task.action === 'withdraw'
+    ) {
+      target = Game.getObjectById(
         task.target as Id<Creep | PowerCreep | Structure>
       );
-
-      if (!target) {
-        this.log('no target for transfer task');
-        this.tasks.shift();
-      }
-
-      const transferResult = this.transfer(target, this.memory.resource);
-      switch (transferResult) {
-        case OK:
-          return true;
-
-        case ERR_NOT_IN_RANGE:
-          // need to check if adjancent squares next to the traget are all blocked and then wait until they become available
-          // or re-path to an open square
-          const pathFinderPath = PathFinder.search(
-            this.pos,
-            { pos: target.pos, range: 1 },
-            {
-              roomCallback: function (roomName) {
-                const room = Game.rooms[roomName];
-
-                if (room.commonCreepCostMatrix) {
-                  return room.commonCreepCostMatrix;
-                }
-
-                // if creating a new CostMatrix for every tick becomes expensive it could be changed to cache in memory and only create a new one
-                // if the interval has been reached --- this will conflict with adding creeps to the CostMatrix though as their
-                // positions will most likely change on every tick
-                const costs = new PathFinder.CostMatrix();
-                room.find(FIND_STRUCTURES).forEach((struct) => {
-                  if (struct.structureType === STRUCTURE_ROAD) {
-                    // TODO: check if decimal is allowed (it may round) and if there is a benefit to have it
-                    costs.set(struct.pos.x, struct.pos.y, 0.75);
-                  } else if (
-                    struct.structureType !== STRUCTURE_CONTAINER &&
-                    (struct.structureType !== STRUCTURE_RAMPART ||
-                      !(struct as OwnedStructure).my)
-                  ) {
-                    costs.set(struct.pos.x, struct.pos.y, 255);
-                  }
-                });
-
-                // The documentation says to "avoid using large values in your CostMatrix and terrain cost flags" b/c it will run slower
-                // Should this taken into account how many creeps are in the room
-                room.find(FIND_CREEPS).forEach((creep) => {
-                  costs.set(creep.pos.x, creep.pos.y, 255);
-                  if (!creep.my) {
-                    // create an area around the creep to try and avoid???
-                    // could make this dependent on if the player has a history of being hostile
-                  }
-                });
-
-                return false;
-              }
-            }
-          );
-
-          if (pathFinderPath.incomplete) {
-            // creep should wait here until a spot opens up
-            return true;
-          } else {
-            this.memory.routing.reached = false;
-            this.memory.routing.route = pathFinderPath.path;
-            return this.moveRoute();
-          }
-
-          break;
-
-        case ERR_INVALID_TARGET:
-          break;
-
-        case ERR_FULL:
-          // TODO: handle what to do with remaining resource
-          // - should certain task been chainable/tied together
-          // - clean up action at the end of the task queue?
-          break;
-
-        default:
-          break;
-      }
     }
 
-    return true;
+    if (!target) {
+      this.tasks.unshift();
+      throw new Error(`No target for ${task.action} task`);
+    }
+
+    let actionReturnCode: ScreepsReturnCode;
+    if (task.action === 'transfer') {
+      actionReturnCode = this.transfer(
+        target as Creep | PowerCreep | Structure,
+        this.memory.resource
+      );
+    } else if (task.action === 'harvest') {
+      actionReturnCode = this.harvest(
+        target as Source | Mineral<MineralConstant>
+      );
+    } else if (task.action === 'withdraw') {
+      actionReturnCode = this.withdraw(target, this.memory.resource);
+    }
+
+    switch (actionReturnCode) {
+      case OK:
+        return true;
+
+      case ERR_NOT_OWNER:
+        this.log(`failed to ${task.action} because target is unowned`);
+        this.tasks.shift();
+        return true;
+
+      case ERR_NOT_IN_RANGE:
+        // need to check if adjacent squares next to the target are all blocked and then wait until they become available
+        // or re-path to an open square
+        const pathFinderPath = PathFinder.search(
+          this.pos,
+          { pos: target.pos, range: 1 },
+          {
+            roomCallback: function (roomName) {
+              return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+            }
+          }
+        );
+
+        if (pathFinderPath.incomplete) {
+          // creep should wait here until a spot opens up
+          // TODO: need to evaluate if the creep is actually close to where it needs to go or not
+          return true;
+        } else {
+          this.memory.routing.reached = false;
+          this.memory.routing.route = pathFinderPath.path;
+          return this.moveRoute();
+        }
+
+      case ERR_NOT_ENOUGH_RESOURCES:
+        if (task.action === 'transfer') {
+          // cannot transfer what it doesn't have
+          this.tasks.shift();
+        }
+        // if withdraw the target may never get resources
+        // should add expiration on how long it will wait
+        return true;
+
+      case ERR_TIRED:
+        // waiting on target to get more resources
+        return true;
+
+      case ERR_NOT_FOUND || ERR_INVALID_TARGET || ERR_FULL:
+        // TODO: handle what to do with remaining resource
+        // - should certain task been chainable/tied together
+        // - clean up action at the end of the task queue?
+        this.log(`${actionReturnCode} for ${task.action}. Removing task.`);
+        this.tasks.shift();
+        // could tell the creep to do its next task but harvesters aren't that important so it can wait until next tick
+        return true;
+
+      default:
+        throw new Error(
+          `Unhandled harvester ${task.action} result: ${actionReturnCode}`
+        );
+    }
   }
 }
-
-export function HarvesterCreep_Move(creep: Creep): void {}
 
 /**
  * TODO: fix movement logic so once creeps get close enough but are blocked they don't recalculate their path

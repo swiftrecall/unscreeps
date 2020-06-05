@@ -1,4 +1,5 @@
 import { Colony } from './colony';
+import padStart from 'lodash/padStart';
 
 export function printGameInfo(prefix?: string): void {
   console.log(
@@ -42,13 +43,16 @@ export function loop() {
     });
   }
 
+  // test function -- Remve when actually running
   Object.values(Game.rooms).forEach((room) => {
     if (room.commonCreepCostMatrix) {
       console.log(`\n${room.name} - commonCreepCostMatrix`);
       for (let y = 0; y < 50; y++) {
         let row = ['\t|'];
         for (let x = 0; x < 50; x++) {
-          row.push(String(room.commonCreepCostMatrix.get(x, y)));
+          row.push(
+            padStart(String(room.commonCreepCostMatrix.get(x, y)), 3, '0')
+          );
         }
         row.push('|');
         console.log(row.join(' '));
@@ -56,6 +60,5 @@ export function loop() {
       console.log();
     }
   });
-  // little test function -- Remve when actually running
-  for (let x = 0; x < 50; x) printGameInfo('Loop End');
+  printGameInfo('Loop End');
 }
