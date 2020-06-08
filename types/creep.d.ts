@@ -7,6 +7,7 @@ interface CreepMemory {
   tasks: any;
   lastPositions?: RoomPosition[];
   resource?: ResourceConstant;
+  colony: string;
 
   // TODO: remove
   source: Id<Source>;

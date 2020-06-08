@@ -1,4 +1,6 @@
 import { log, error } from '../util';
+import { Colony } from '../colony';
+import { global_ } from '../main';
 
 export enum CreepRole {
   Harvester,
@@ -36,7 +38,7 @@ export const CreepPathVisualization: PolyStyle = {
   opacity: 0.1
 };
 
-export interface ITask {
+export interface ITask<T = any> {
   action:
     | 'transfer'
     | 'harvest'
@@ -44,8 +46,9 @@ export interface ITask {
     | 'attack'
     | 'repair'
     | 'build'
-    | 'upgrade';
-  target?: Id<any>;
+    | 'upgrade'
+    | 'pickup';
+  target?: Id<T>;
 }
 
 export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
@@ -91,8 +94,9 @@ export abstract class _Creep extends Creep {
     this.memory.tasks = _tasks;
   }
 
-  constructor(id: Id<Creep>) {
+  constructor(id: Id<Creep>, colonyName: string) {
     super(id);
+    this.memory.colony = colonyName;
   }
 
   /**
@@ -105,6 +109,10 @@ export abstract class _Creep extends Creep {
    * Execute the creeps assigned task
    */
   abstract execute(): boolean;
+
+  public get colony(): Colony {
+    return global_.colonies[this.memory.colony];
+  }
 
   private checkRun(): boolean {
     if (this.spawning) {

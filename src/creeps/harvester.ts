@@ -4,7 +4,8 @@ import {
   CreepRole,
   CreepPathVisualization,
   _Creep,
-  SetupCommonCreepCostMatrix
+  SetupCommonCreepCostMatrix,
+  ITask
 } from './creep';
 
 export class HarvesterCreep extends _Creep {
@@ -12,7 +13,20 @@ export class HarvesterCreep extends _Creep {
     return this.memory.resource;
   }
 
-  setup(): void {}
+  setup(): void {
+    if (this.tasks.length === 0) {
+      const tasks: ITask[] = [];
+      // create tasks for creep
+      // find sources that can be harvested
+      if (this.colony.sources.length) {
+        const source = this.colony.sources[0];
+        tasks.push({ action: 'harvest', target: source.id });
+        // move the source to the end of the list since its been assigned to a creep
+        this.colony.sources.push(this.colony.sources.shift());
+        source.assignedCreeps.push(this.id);
+      }
+    }
+  }
 
   execute(): boolean {
     if (!this.tasks[0]) {
@@ -28,7 +42,8 @@ export class HarvesterCreep extends _Creep {
     if (
       task.action === 'transfer' ||
       task.action === 'harvest' ||
-      task.action === 'withdraw'
+      task.action === 'withdraw' ||
+      task.action === 'pickup'
     ) {
       target = Game.getObjectById(
         task.target as Id<Creep | PowerCreep | Structure>

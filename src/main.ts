@@ -15,6 +15,8 @@ export function printGameInfo(prefix?: string): void {
   );
 }
 
+export const global_: { colonies?: { [key: string]: Colony } } = {};
+
 export function loop() {
   printGameInfo('Loop Start');
 
@@ -33,13 +35,15 @@ export function loop() {
       console.log('Place a spawn to begin');
     }
   } else {
-    const colonies: Colony[] = Object.keys(Memory.colonies).map(
-      (colonyName) => new Colony(colonyName)
-    );
-    colonies.forEach((colony) => {
-      console.log(`Running colony: ${colony.colonyName}`);
-      colony.run();
-      colony.finish();
+    global_.colonies = {};
+    Object.keys(Memory.colonies).forEach((colonyName) => {
+      global_.colonies[colonyName] = new Colony(colonyName);
+    });
+    Object.entries(global_.colonies).forEach(([colonyName, colony]) => {
+      console.log(`Running ${colonyName}`);
+      if (colony.checkRun()) {
+        colony.run();
+      }
     });
   }
 
