@@ -49,6 +49,7 @@ export interface ITask<T = any> {
     | 'upgrade'
     | 'pickup';
   target?: Id<T>;
+  repeatable: boolean;
 }
 
 export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
@@ -86,12 +87,65 @@ export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
   return room.commonCreepCostMatrix;
 }
 
+function getDirection(
+  current: RoomPosition,
+  next: RoomPosition
+): DirectionConstant {
+  // TODO: account for different rooms
+  if (current.x === next.x) {
+    // top or bottom
+    if (current.y < next.y) {
+      return TOP;
+    } else {
+      return BOTTOM;
+    }
+  } else if (current.y === next.y) {
+    // left or right
+    if (current.x < next.x) {
+      return RIGHT;
+    } else {
+      return LEFT;
+    }
+  } else {
+    // diagonal
+    if (current.y < next.y) {
+      // diagonal top
+      if (current.x < next.x) {
+        return TOP_RIGHT;
+      } else {
+        return TOP_LEFT;
+      }
+    } else {
+      // diagonal bottom
+      if (current.x < next.x) {
+        return BOTTOM_RIGHT;
+      } else {
+        return BOTTOM_LEFT;
+      }
+    }
+  }
+}
+
 export abstract class _Creep extends Creep {
+  protected currentTask: number = 0;
+
   protected get tasks() {
     return this.memory.tasks as ITask[];
   }
   protected set tasks(_tasks) {
     this.memory.tasks = _tasks;
+  }
+
+  protected setNextTask() {
+    if (!this.tasks[this.currentTask].repeatable) {
+      this.tasks.shift();
+    } else {
+      this.currentTask++;
+    }
+
+    if (this.currentTask >= this.tasks.length) {
+      this.currentTask = 0;
+    }
   }
 
   constructor(id: Id<Creep>, colonyName: string) {
@@ -131,7 +185,30 @@ export abstract class _Creep extends Creep {
    * Moves the creep along the assigned route.
    * @param task {@link ITask} Task to execute once route is complete
    */
-  public moveRoute(task?: ITask): boolean {
+  public moveRoute(): boolean {
+    if (!this.memory.routing.currentPosition) {
+      this.memory.routing.currentPosition = 0;
+    }
+
+    const { route, currentPosition } = this.memory.routing;
+
+    if (currentPosition + 1 <= route.length - 1) {
+      const moveResult = this.move(
+        getDirection(route[currentPosition], route[currentPosition + 1])
+      );
+
+      if (moveResult === OK) {
+        this.memory.routing.currentPosition =
+          this.memory.routing.currentPosition + 1;
+        if (this.memory.routing.currentPosition === route.length - 1) {
+          this.memory.routing.reached = true;
+        }
+      } else {
+        this.log(`Could not completed move: ${moveResult}`);
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -155,7 +232,7 @@ export abstract class _Creep extends Creep {
       if (!this.tasks.length) {
         this.log('task list is empty');
       }
-      if (this.moveRoute(this.tasks[0])) {
+      if (this.moveRoute()) {
         return true;
       }
     } catch (e) {

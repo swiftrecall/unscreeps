@@ -1,10 +1,6 @@
-import { SpawnRequestQueue, CreepSpawnRequest } from './spawner';
+import { SpawnRequestQueue } from './spawner';
 import { ID } from './util';
-import {
-  spawnHarvesterCreep,
-  HarvesterCreep,
-  FHarvesterCreep
-} from './creeps/harvester';
+import { HarvesterCreep, spawnHarvesterCreep } from './creeps/harvester';
 import { CreepRole, CreepState, _Creep } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
 import {
@@ -128,7 +124,13 @@ export class Colony implements IColony {
       );
       this.sources.splice(insertIndex, 0, _source);
     });
-    this.room.find(FIND_SOURCES).map((value) => new _Source(value));
+    this.room.find(FIND_SOURCES).map((value) => {
+      const _source = new _Source(value);
+      if (_source.assignedCreeps.length < 2) {
+        this.harvestableSources.push(_source);
+      }
+      this.sources.push(_source);
+    });
 
     this.droppedResources = this.room.find(FIND_DROPPED_RESOURCES);
 
@@ -155,6 +157,17 @@ export class Colony implements IColony {
     this.spawners.forEach((spawner) => {
       if (!spawner.spawning) {
         // TODO: define spawn need
+        if (this.harvestableSources.length) {
+          spawnHarvesterCreep(
+            spawner,
+            {
+              type: CreepRole.Harvester, // This is useless
+              priority: 0,
+              body: [WORK, MOVE, MOVE, CARRY, CARRY]
+            },
+            { energyStructures: this.extensions }
+          );
+        }
       }
     });
 
