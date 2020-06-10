@@ -4,6 +4,10 @@ const wFill = 0.25;
 export class _Source extends Source {
   constructor(_source: Source) {
     super(_source.id);
+    // TODO: find a better place for this
+    if (!this.room.memory.sources) {
+      this.room.memory = { sources: {} };
+    }
     if (!this.room.memory.sources[this.id]) {
       this.room.memory.sources[this.id] = { assignedCreeps: [] };
     }

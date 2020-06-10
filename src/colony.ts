@@ -84,6 +84,15 @@ export class Colony implements IColony {
   constructor(roomName: string) {
     this.colonyName = roomName;
     this.room = Game.rooms[roomName];
+    this.initMemory();
+  }
+
+  private initMemory(): void {
+    if (!this.room.memory) {
+      this.room.memory = {
+        sources: {}
+      };
+    }
     this.memory =
       (Memory.colonies[this.colonyName] as ColonyMemory) ||
       BootstrapColonyMemory();
@@ -117,12 +126,12 @@ export class Colony implements IColony {
 
     this.room.find(FIND_SOURCES).forEach((source) => {
       const _source = new _Source(source);
-      const insertIndex = _.sortedIndexBy(
-        this.sources,
-        _source,
-        (s) => s.harvestPriority
-      );
-      this.sources.splice(insertIndex, 0, _source);
+      let index = this.sources.length;
+      for (; index > 0; index--) {
+        if (this.sources[index].harvestPriority < _source.harvestPriority) {
+          this.sources.splice(index, 0, _source);
+        }
+      }
     });
     this.room.find(FIND_SOURCES).map((value) => {
       const _source = new _Source(value);
@@ -131,6 +140,8 @@ export class Colony implements IColony {
       }
       this.sources.push(_source);
     });
+    console.log('sources:', this.sources.length);
+    console.log('harvestable sources:', this.harvestableSources.length);
 
     this.droppedResources = this.room.find(FIND_DROPPED_RESOURCES);
 
@@ -154,23 +165,27 @@ export class Colony implements IColony {
     this.init();
     console.log('RUN');
 
+    console.log('running spawners: ', this.spawners.length);
     this.spawners.forEach((spawner) => {
       if (!spawner.spawning) {
+        console.log('not spawning');
         // TODO: define spawn need
         if (this.harvestableSources.length) {
+          console.log('spawning harvester');
           spawnHarvesterCreep(
             spawner,
             {
-              type: CreepRole.Harvester, // This is useless
+              type: CreepRole.Harvester, // This is useless atm
               priority: 0,
-              body: [WORK, MOVE, MOVE, CARRY, CARRY]
+              body: [WORK, MOVE, CARRY, CARRY]
             },
-            { energyStructures: this.extensions }
+            { energyStructures: [spawner].concat(this.extensions as any) }
           );
         }
       }
     });
 
+    console.log('running creeps: ', this.creeps.length);
     this.creeps.forEach((creep: _Creep) => {
       creep.run();
     });
@@ -405,17 +420,5 @@ export class Colony implements IColony {
     //       break;
     //   }
     // });
-  }
-
-  public finish(): void {
-    this.memory.spawnRequestQueue = this.spawnRequestQueue.serialize();
-    this.memory.constructionOrders = this.constructionOrders.map((directive) =>
-      ConstructionDirective.serialize(directive)
-    );
-    // Object.entries(this.creepsByRole).forEach(
-    //   ([role, creeps]) =>
-    //     (this.memory.creepsByRole[role] = creeps.map((creep) => creep.id))
-    // );
-    Memory.colonies[this.colonyName] = this.memory;
   }
 }

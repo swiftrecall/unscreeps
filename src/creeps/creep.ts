@@ -1,6 +1,6 @@
 import { log, error } from '../util';
 import { Colony } from '../colony';
-import { global_ } from '../main';
+// import { global_ } from '../main';
 
 export enum CreepRole {
   Harvester,
@@ -130,6 +130,9 @@ export abstract class _Creep extends Creep {
   protected currentTask: number = 0;
 
   protected get tasks() {
+    if (!this.memory.tasks) {
+      this.memory.tasks = [];
+    }
     return this.memory.tasks as ITask[];
   }
   protected set tasks(_tasks) {
@@ -151,6 +154,7 @@ export abstract class _Creep extends Creep {
   constructor(id: Id<Creep>, colonyName: string) {
     super(id);
     this.memory.colony = colonyName;
+    console.log('setting colony:', this.memory.colony);
   }
 
   /**
@@ -165,6 +169,11 @@ export abstract class _Creep extends Creep {
   abstract execute(): boolean;
 
   public get colony(): Colony {
+    console.log(
+      'get colony: ',
+      this.memory.colony,
+      JSON.stringify(global_.colonies[this.memory.colony])
+    );
     return global_.colonies[this.memory.colony];
   }
 

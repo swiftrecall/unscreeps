@@ -7,9 +7,11 @@ function formatConsoleMessage(message: any, type?: string): string {
 }
 
 export function log(message: string, type?: string): void {
-  console.log(formatConsoleMessage(message, type));
+  console.log('{LOG} ' + formatConsoleMessage(message, type));
 }
 
 export function error(error: any, type?: string): void {
-  console.error(formatConsoleMessage(error, type));
+  console.log(
+    '{ERROR} ' + formatConsoleMessage((error && error.stack) || error, type)
+  );
 }

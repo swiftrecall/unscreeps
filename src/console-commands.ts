@@ -1,5 +1,5 @@
-export default function ConsoleCommand {
-    if (Memory.command) {
-        var _command;
-    }
-}
+// export default function ConsoleCommand {
+//     if (Memory.command) {
+//         var _command;
+//     }
+// }

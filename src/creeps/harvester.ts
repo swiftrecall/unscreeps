@@ -7,6 +7,7 @@ import {
   SetupCommonCreepCostMatrix,
   ITask
 } from './creep';
+// import { global_ } from '../main';
 
 export class HarvesterCreep extends _Creep {
   public get resource() {
@@ -14,11 +15,16 @@ export class HarvesterCreep extends _Creep {
   }
 
   setup(): void {
+    if (!this.tasks) {
+      this.tasks = [];
+    }
     if (this.tasks.length === 0) {
       const tasks: ITask[] = [];
       // create tasks for creep
       // find sources that can be harvested
       if (!this.memory.assignedSource) {
+        const colony = global_.colonies[this.memory.colony];
+        console.log('setup colony:', JSON.stringify(colony));
         if (this.colony.harvestableSources.length) {
           const source = this.colony.sources[0];
           tasks.push({
@@ -221,8 +227,10 @@ export function spawnHarvesterCreep(
     name = `harv_${ID}`;
   }
   if (spawnReturnCode === OK) {
+    console.log('dry run passed, executing');
     spawnOpts.dryRun = false;
     spawnReturnCode = spawner.spawnCreep(spawnRequest.body, name, spawnOpts);
   }
+  console.log('spawnReturnCode:', spawnReturnCode);
   return spawnReturnCode;
 }
