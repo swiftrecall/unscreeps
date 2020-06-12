@@ -1,5 +1,7 @@
 import { Colony } from './colony';
 import _ from 'lodash';
+import global_ from './global';
+import { padStart } from './util';
 
 export function printGameInfo(prefix?: string): void {
   console.log(
@@ -14,9 +16,6 @@ export function printGameInfo(prefix?: string): void {
       `\n\tgcl progressTotal: ${Game.gcl.progressTotal}`
   );
 }
-
-// declare var global_: { colonies: { [key: string]: any } };
-var global_ = { colonies: {} };
 
 export function loop() {
   printGameInfo('Loop Start');
@@ -59,21 +58,31 @@ export function loop() {
   });
 
   // test function -- Remve when actually running
-  Object.values(Game.rooms).forEach((room) => {
-    if (room.commonCreepCostMatrix) {
-      console.log(`\n${room.name} - commonCreepCostMatrix`);
-      for (let y = 0; y < 50; y++) {
-        let row = ['\t|'];
-        for (let x = 0; x < 50; x++) {
-          row.push(
-            _.padStart(String(room.commonCreepCostMatrix.get(x, y)), 3, '0')
-          );
-        }
-        row.push('|');
-        console.log(row.join(' '));
+  // Object.values(Game.rooms).forEach((room) => {
+  //   if (room.commonCreepCostMatrix) {
+  //     console.log(`\n${room.name} - commonCreepCostMatrix`);
+  //     for (let y = 0; y < 50; y++) {
+  //       let row = ['\t|'];
+  //       for (let x = 0; x < 50; x++) {
+  //         row.push(
+  //           padStart(String(room.commonCreepCostMatrix.get(x, y)), 3, '0')
+  //         );
+  //       }
+  //       row.push('|');
+  //       console.log(row.join(' '));
+  //     }
+  //     console.log();
+  //   }
+  // });
+
+  // TODO: formalize structure
+  if (Game.time % 10 === 0) {
+    // clean up dead creeps
+    (Object.keys(Memory.creeps) || []).forEach((creepId) => {
+      if (!Game.creeps[creepId]) {
+        delete Memory.creeps[creepId];
       }
-      console.log();
-    }
-  });
+    });
+  }
   printGameInfo('Loop End');
 }

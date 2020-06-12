@@ -135,9 +135,7 @@ export class Colony implements IColony {
     });
     this.room.find(FIND_SOURCES).map((value) => {
       const _source = new _Source(value);
-      if (_source.assignedCreeps.length < 2) {
-        this.harvestableSources.push(_source);
-      }
+      this.harvestableSources.push(_source);
       this.sources.push(_source);
     });
     console.log('sources:', this.sources.length);
@@ -170,7 +168,7 @@ export class Colony implements IColony {
       if (!spawner.spawning) {
         console.log('not spawning');
         // TODO: define spawn need
-        if (this.harvestableSources.length) {
+        if (this.creeps.length < 2) {
           console.log('spawning harvester');
           spawnHarvesterCreep(
             spawner,

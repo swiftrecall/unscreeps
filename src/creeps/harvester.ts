@@ -1,13 +1,6 @@
 import { ID } from '../util';
-import {
-  CreepState,
-  CreepRole,
-  CreepPathVisualization,
-  _Creep,
-  SetupCommonCreepCostMatrix,
-  ITask
-} from './creep';
-// import { global_ } from '../main';
+import { CreepRole, _Creep, SetupCommonCreepCostMatrix, ITask } from './creep';
+import global_ from '../global';
 
 export class HarvesterCreep extends _Creep {
   public get resource() {
@@ -19,37 +12,48 @@ export class HarvesterCreep extends _Creep {
       this.tasks = [];
     }
     if (this.tasks.length === 0) {
+      this.log('setting tasks');
       const tasks: ITask[] = [];
       // create tasks for creep
       // find sources that can be harvested
       if (!this.memory.assignedSource) {
-        const colony = global_.colonies[this.memory.colony];
-        console.log('setup colony:', JSON.stringify(colony));
         if (this.colony.harvestableSources.length) {
-          const source = this.colony.sources[0];
-          tasks.push({
-            action: 'harvest',
-            target: source.id,
-            repeatable: true
-          });
-          // move the source to the end of the list since its been assigned to a creep
-          this.colony.sources.push(this.colony.sources.shift());
-          source.assignedCreeps.push(this.id);
-        } else {
-          this.suicide();
-          throw new Error('There are no harvestable sources');
+          this.memory.assignedSource = this.colony.harvestableSources[0].id;
         }
       }
+
+      tasks.push({
+        action: 'harvest',
+        target: this.memory.assignedSource,
+        repeatable: true
+      });
 
       tasks.push({
         action: 'transfer',
         target: this.colony.spawners[0].id,
         repeatable: true
       });
+
+      this.memory.routing = {
+        route: PathFinder.search(
+          this.pos,
+          { pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
+          {
+            roomCallback: function (roomName) {
+              return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+            }
+          }
+        ).path,
+        reached: false,
+        currentPosition: 0
+      };
+
+      this.tasks = tasks;
     }
   }
 
   execute(): boolean {
+    this.log('execute');
     if (!this.tasks[this.currentTask]) {
       // no tasks
       // TODO: handle? currently will just exit
@@ -57,6 +61,8 @@ export class HarvesterCreep extends _Creep {
     }
 
     const task = this.tasks[this.currentTask];
+
+    this.log(JSON.stringify(task));
 
     let target;
 
@@ -92,6 +98,7 @@ export class HarvesterCreep extends _Creep {
 
     switch (actionReturnCode) {
       case OK:
+        this.log('OK');
         return true;
 
       case ERR_NOT_OWNER:
@@ -100,6 +107,7 @@ export class HarvesterCreep extends _Creep {
         return true;
 
       case ERR_NOT_IN_RANGE:
+        this.log('ERR_NOT_IN_RANGE');
         // need to check if adjacent squares next to the target are all blocked and then wait until they become available
         // or re-path to an open square
         const pathFinderPath = PathFinder.search(
@@ -123,6 +131,7 @@ export class HarvesterCreep extends _Creep {
         }
 
       case ERR_NOT_ENOUGH_RESOURCES:
+        this.log('ERR_NOT_ENOUGH_RESOURCES');
         if (task.action === 'transfer') {
           // cannot transfer what it doesn't have
           this.setNextTask();

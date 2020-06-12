@@ -1,7 +1,13 @@
-import { CreepState, CreepRole } from './creep';
+import { CreepState, CreepRole, _Creep } from './creep';
 import { ID } from '../util';
 
-// export class UpgraderCreep extends Creep {}
+export class UpgraderCreep extends _Creep {
+  setup(): void {}
+
+  execute(): boolean {
+    throw new Error('Method not implemented.');
+  }
+}
 
 export function SpawnUpgraderCreep(
   spawner: StructureSpawn,
@@ -31,7 +37,7 @@ export function SpawnUpgraderCreep(
  *
  * @param creep
  */
-export function UpgraderCreep(creep: Creep): void {
+export function FnUpgraderCreep(creep: Creep): void {
   switch (creep.memory.state) {
     case CreepState.Harvesting:
       if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {

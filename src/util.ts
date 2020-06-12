@@ -15,3 +15,13 @@ export function error(error: any, type?: string): void {
     '{ERROR} ' + formatConsoleMessage((error && error.stack) || error, type)
   );
 }
+
+export function padStart(str: string, amount: number, char: string) {
+  if (!str) {
+    return char.repeat(amount);
+  } else if (str.length < amount) {
+    return char.repeat(amount - str.length) + str;
+  } else {
+    return str;
+  }
+}

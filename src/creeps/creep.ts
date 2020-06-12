@@ -1,5 +1,6 @@
 import { log, error } from '../util';
 import { Colony } from '../colony';
+import global_ from '../global';
 // import { global_ } from '../main';
 
 export enum CreepRole {
@@ -95,9 +96,9 @@ function getDirection(
   if (current.x === next.x) {
     // top or bottom
     if (current.y < next.y) {
-      return TOP;
-    } else {
       return BOTTOM;
+    } else {
+      return TOP;
     }
   } else if (current.y === next.y) {
     // left or right
@@ -111,19 +112,28 @@ function getDirection(
     if (current.y < next.y) {
       // diagonal top
       if (current.x < next.x) {
-        return TOP_RIGHT;
-      } else {
-        return TOP_LEFT;
-      }
-    } else {
-      // diagonal bottom
-      if (current.x < next.x) {
         return BOTTOM_RIGHT;
       } else {
         return BOTTOM_LEFT;
       }
+    } else {
+      // diagonal bottom
+      if (current.x < next.x) {
+        return TOP_RIGHT;
+      } else {
+        return TOP_LEFT;
+      }
     }
   }
+}
+
+export function areRoomPositionsEqual(
+  pos1: RoomPosition,
+  pos2: RoomPosition
+): boolean {
+  return (
+    pos1.roomName !== pos2.roomName || pos1.x !== pos2.x || pos1.y !== pos2.y
+  );
 }
 
 export abstract class _Creep extends Creep {
@@ -195,16 +205,37 @@ export abstract class _Creep extends Creep {
    * @param task {@link ITask} Task to execute once route is complete
    */
   public moveRoute(): boolean {
-    if (!this.memory.routing.currentPosition) {
+    this.log('moving');
+    if (!this.memory.routing) {
+      this.log('no routing');
+      return false;
+    }
+    if (
+      !this.memory.routing.currentPosition ||
+      this.memory.routing.currentPosition >=
+        (this.memory.routing.route || []).length
+    ) {
       this.memory.routing.currentPosition = 0;
     }
 
     const { route, currentPosition } = this.memory.routing;
 
-    if (currentPosition + 1 <= route.length - 1) {
-      const moveResult = this.move(
-        getDirection(route[currentPosition], route[currentPosition + 1])
-      );
+    this.log(
+      `curr: ${JSON.stringify(this.pos)} | routePos: ${route[currentPosition]}`
+    );
+    if (!areRoomPositionsEqual(route[currentPosition], this.pos)) {
+      console.log('!areRoomPositionsEqual');
+      route.splice(currentPosition, 0, this.pos);
+      this.memory.routing.route = route;
+    } else {
+      console.log('room positions are equal');
+    }
+
+    if (currentPosition + 1 < route.length) {
+      this.log('initiating move');
+      const direction = getDirection(this.pos, route[currentPosition + 1]);
+      this.log('moving direction: ' + direction);
+      const moveResult = this.move(direction);
 
       if (moveResult === OK) {
         this.memory.routing.currentPosition =
@@ -216,6 +247,9 @@ export abstract class _Creep extends Creep {
         this.log(`Could not completed move: ${moveResult}`);
         return false;
       }
+    } else {
+      this.log('setting reached to true');
+      this.memory.routing.reached = true;
     }
 
     return true;

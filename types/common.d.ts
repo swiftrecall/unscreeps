@@ -7,4 +7,4 @@ interface Memory {
   command: string;
 }
 
-declare var global_: any;
+// declare var global_: any;
