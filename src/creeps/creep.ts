@@ -131,8 +131,9 @@ export function areRoomPositionsEqual(
   pos1: RoomPosition,
   pos2: RoomPosition
 ): boolean {
+  console.log('comparing:', JSON.stringify(pos1), JSON.stringify(pos2));
   return (
-    pos1.roomName !== pos2.roomName || pos1.x !== pos2.x || pos1.y !== pos2.y
+    pos1.roomName === pos2.roomName && pos1.x === pos2.x && pos1.y === pos2.y
   );
 }
 
@@ -149,15 +150,41 @@ export abstract class _Creep extends Creep {
     this.memory.tasks = _tasks;
   }
 
+  public getCurrentTask(): ITask | null {
+    return this.tasks[this.currentTask] || null;
+  }
+
   protected setNextTask() {
     if (!this.tasks[this.currentTask].repeatable) {
-      this.tasks.shift();
+      // TODO: fix this, could lead to infinite loop of doing the same task if not careful
+      this.tasks.push(this.tasks.shift());
+      this.log(`repeated task: ${JSON.stringify(this.tasks)}`);
     } else {
       this.currentTask++;
     }
 
     if (this.currentTask >= this.tasks.length) {
       this.currentTask = 0;
+    }
+
+    if (this.tasks[this.currentTask] && this.tasks[this.currentTask].target) {
+      const target = Game.getObjectById(this.tasks[this.currentTask].target);
+      if (target) {
+        this.memory.routing = {
+          route: PathFinder.search(
+            this.pos, { pos: target.pos, range: 1},
+            {
+              roomCallback: function (roomName) {
+                return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+              }
+            }
+          ).path,
+          reached: false,
+          currentPosition: 0
+        }
+      } else {
+        this.log('Next task target does not exist');
+      }
     }
   }
 
@@ -205,11 +232,20 @@ export abstract class _Creep extends Creep {
    * @param task {@link ITask} Task to execute once route is complete
    */
   public moveRoute(): boolean {
-    this.log('moving');
     if (!this.memory.routing) {
       this.log('no routing');
       return false;
     }
+
+    if (!this.memory.routing.route || this.memory.routing.route.length === 0) {
+      this.memory.routing.reached = true;
+    }
+
+    if (this.memory.routing.reached === true) {
+      this.log('reached');
+      return true;
+    }
+    this.log('moveRoute');
     if (
       !this.memory.routing.currentPosition ||
       this.memory.routing.currentPosition >=
@@ -272,22 +308,11 @@ export abstract class _Creep extends Creep {
         this.execute();
       }
 
-      if (!this.tasks.length) {
-        this.log('task list is empty');
-      }
       if (this.moveRoute()) {
         return true;
       }
     } catch (e) {
       error(e, 'Creep');
-    } finally {
-      if (this.fatigue === 0) {
-        if (this.memory.lastPositions === undefined) {
-          this.memory.lastPositions = [];
-        }
-        this.memory.lastPositions.unshift(this.pos);
-        this.memory.lastPositions = this.memory.lastPositions.slice(0, 5);
-      }
     }
   }
 }

@@ -17,8 +17,28 @@ export function printGameInfo(prefix?: string): void {
   );
 }
 
+export function printRoomCostMatrices() {
+    // test function -- Remve when actually running
+  Object.values(Game.rooms).forEach((room) => {
+    if (room.commonCreepCostMatrix) {
+      console.log(`\n${room.name} - commonCreepCostMatrix`);
+      for (let y = 0; y < 50; y++) {
+        let row = ['\t|'];
+        for (let x = 0; x < 50; x++) {
+          row.push(
+            padStart(String(room.commonCreepCostMatrix.get(x, y)), 3, '0')
+          );
+        }
+        row.push('|');
+        console.log(row.join(' '));
+      }
+      console.log();
+    }
+  });
+}; 
+
 export function loop() {
-  printGameInfo('Loop Start');
+  // printGameInfo('Loop Start');
 
   if (!Memory.colonies || Object.keys(Memory.colonies).length === 0) {
     Memory.colonies = {};
@@ -35,45 +55,16 @@ export function loop() {
       console.log('Place a spawn to begin');
     }
   }
-  //  else {
-  //   global_.colonies = {};
-  //   Object.keys(Memory.colonies).forEach((colonyName) => {
-  //     global_.colonies[colonyName] = new Colony(colonyName);
-  //   });
-  //   Object.entries(global_.colonies).forEach(([colonyName, colony]) => {
-  //     console.log(`Running ${colonyName}`);
-  //     if (colony.checkRun()) {
-  //       colony.run();
-  //     }
-  //   });
-  // }
 
   Object.keys(Memory.colonies).forEach((colonyName) => {
-    console.log('setting colony:', colonyName);
+    // console.log('setting colony:', colonyName);
     global_.colonies[colonyName] = new Colony(colonyName);
-    console.log('colony');
     if (global_.colonies[colonyName].checkRun()) {
       global_.colonies[colonyName].run();
     }
   });
 
-  // test function -- Remve when actually running
-  // Object.values(Game.rooms).forEach((room) => {
-  //   if (room.commonCreepCostMatrix) {
-  //     console.log(`\n${room.name} - commonCreepCostMatrix`);
-  //     for (let y = 0; y < 50; y++) {
-  //       let row = ['\t|'];
-  //       for (let x = 0; x < 50; x++) {
-  //         row.push(
-  //           padStart(String(room.commonCreepCostMatrix.get(x, y)), 3, '0')
-  //         );
-  //       }
-  //       row.push('|');
-  //       console.log(row.join(' '));
-  //     }
-  //     console.log();
-  //   }
-  // });
+  // printRoomCostMatrices();
 
   // TODO: formalize structure
   if (Game.time % 10 === 0) {
@@ -84,5 +75,5 @@ export function loop() {
       }
     });
   }
-  printGameInfo('Loop End');
+  // printGameInfo('Loop End');
 }

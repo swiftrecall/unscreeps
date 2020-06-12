@@ -161,15 +161,14 @@ export class Colony implements IColony {
 
   public run(): void {
     this.init();
-    console.log('RUN');
 
-    console.log('running spawners: ', this.spawners.length);
+    // console.log('running spawners: ', this.spawners.length);
     this.spawners.forEach((spawner) => {
       if (!spawner.spawning) {
-        console.log('not spawning');
+        // console.log('not spawning');
         // TODO: define spawn need
         if (this.creeps.length < 2) {
-          console.log('spawning harvester');
+          // console.log('spawning harvester');
           spawnHarvesterCreep(
             spawner,
             {
@@ -183,7 +182,7 @@ export class Colony implements IColony {
       }
     });
 
-    console.log('running creeps: ', this.creeps.length);
+    // console.log('running creeps: ', this.creeps.length);
     this.creeps.forEach((creep: _Creep) => {
       creep.run();
     });

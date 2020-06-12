@@ -52,6 +52,11 @@ export class HarvesterCreep extends _Creep {
     }
   }
 
+  public isFull(): boolean {
+    // TODO: fix for other carry types
+    return this.carryCapacity === this.store[RESOURCE_ENERGY];
+  }
+
   execute(): boolean {
     this.log('execute');
     if (!this.tasks[this.currentTask]) {
@@ -60,12 +65,15 @@ export class HarvesterCreep extends _Creep {
       throw new Error('No tasks available');
     }
 
+    if (this.tasks[this.currentTask].action === 'harvest' && this.isFull()) {
+      this.setNextTask();
+    }
+
     const task = this.tasks[this.currentTask];
 
     this.log(JSON.stringify(task));
 
     let target;
-
     if (
       task.action === 'transfer' ||
       task.action === 'harvest' ||
@@ -86,7 +94,9 @@ export class HarvesterCreep extends _Creep {
     if (task.action === 'transfer') {
       actionReturnCode = this.transfer(
         target as Creep | PowerCreep | Structure,
-        this.memory.resource
+        RESOURCE_ENERGY
+        // TODO: adding setting resource in harvest task
+        // this.memory.resource
       );
     } else if (task.action === 'harvest') {
       actionReturnCode = this.harvest(
@@ -99,6 +109,11 @@ export class HarvesterCreep extends _Creep {
     switch (actionReturnCode) {
       case OK:
         this.log('OK');
+        if (task.action === 'harvest' && this.isFull()) {
+          this.setNextTask();
+        } else if (task.action === 'transfer' && this.store[RESOURCE_ENERGY] === 0) {
+          this.setNextTask();
+        }
         return true;
 
       case ERR_NOT_OWNER:
@@ -143,6 +158,10 @@ export class HarvesterCreep extends _Creep {
 
       case ERR_TIRED:
         // waiting on target to get more resources
+        return true;
+
+      case ERR_FULL:
+        this.log('Waiting until target needs resources');
         return true;
 
       case ERR_NOT_FOUND || ERR_INVALID_TARGET || ERR_FULL:
