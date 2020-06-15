@@ -78,7 +78,7 @@ export class HarvesterCreep extends _Creep {
     }
 
     if (!target) {
-      this.tasks.unshift();
+      this.tasks.splice(this.currentTask, 1);
       throw new Error(`No target for ${task.action} task`);
     }
 
@@ -96,6 +96,7 @@ export class HarvesterCreep extends _Creep {
       actionReturnCode = this.withdraw(target, this.memory.resource);
     }
 
+    this.log(`actionReturnCode: ${actionReturnCode}`);
     switch (actionReturnCode) {
       case OK:
         this.log('OK');
@@ -145,7 +146,10 @@ export class HarvesterCreep extends _Creep {
         // waiting on target to get more resources
         return true;
 
-      case ERR_NOT_FOUND || ERR_INVALID_TARGET || ERR_FULL:
+      case ERR_FULL:
+        return true;
+
+      case ERR_NOT_FOUND || ERR_INVALID_TARGET:
         // TODO: handle what to do with remaining resource
         // - should certain task been chainable/tied together
         // - clean up action at the end of the task queue?

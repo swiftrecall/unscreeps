@@ -17,47 +17,7 @@ export function printGameInfo(prefix?: string): void {
   );
 }
 
-export function loop() {
-  printGameInfo('Loop Start');
-
-  if (!Memory.colonies || Object.keys(Memory.colonies).length === 0) {
-    Memory.colonies = {};
-    // setup first room
-    // console.log('no colonies found');
-    const spawns = Object.values(Game.spawns);
-    if (spawns.length > 0) {
-      console.log('Found a spawn to start with');
-      const startSpawn = spawns[0];
-      // const newColony = new Colony(startSpawn.room.name);
-      Memory.colonies[startSpawn.room.name] = {};
-      // newColony.run();
-    } else {
-      console.log('Place a spawn to begin');
-    }
-  }
-  //  else {
-  //   global_.colonies = {};
-  //   Object.keys(Memory.colonies).forEach((colonyName) => {
-  //     global_.colonies[colonyName] = new Colony(colonyName);
-  //   });
-  //   Object.entries(global_.colonies).forEach(([colonyName, colony]) => {
-  //     console.log(`Running ${colonyName}`);
-  //     if (colony.checkRun()) {
-  //       colony.run();
-  //     }
-  //   });
-  // }
-
-  Object.keys(Memory.colonies).forEach((colonyName) => {
-    console.log('setting colony:', colonyName);
-    global_.colonies[colonyName] = new Colony(colonyName);
-    console.log('colony');
-    if (global_.colonies[colonyName].checkRun()) {
-      global_.colonies[colonyName].run();
-    }
-  });
-
-  // test function -- Remve when actually running
+function printCostMatricies() {
   // Object.values(Game.rooms).forEach((room) => {
   //   if (room.commonCreepCostMatrix) {
   //     console.log(`\n${room.name} - commonCreepCostMatrix`);
@@ -74,6 +34,38 @@ export function loop() {
   //     console.log();
   //   }
   // });
+}
+
+export function loop() {
+  // printGameInfo('Loop Start');
+
+  if (!Memory.colonies || Object.keys(Memory.colonies).length === 0) {
+    Memory.colonies = {};
+    // setup first room
+    // console.log('no colonies found');
+    const spawns = Object.values(Game.spawns);
+    if (spawns.length > 0) {
+      console.log('Found a spawn to start with');
+      const startSpawn = spawns[0];
+      // const newColony = new Colony(startSpawn.room.name);
+      Memory.colonies[startSpawn.room.name] = {};
+      // newColony.run();
+    } else {
+      console.log('Place a spawn to begin');
+    }
+  }
+
+  Object.keys(Memory.colonies).forEach((colonyName) => {
+    // console.log('setting colony:', colonyName);
+    global_.colonies[colonyName] = new Colony(colonyName);
+    // console.log('colony');
+    if (global_.colonies[colonyName].checkRun()) {
+      global_.colonies[colonyName].run();
+    }
+  });
+
+  // test function -- Remve when actually running
+  // printCostMatricies();
 
   // TODO: formalize structure
   if (Game.time % 10 === 0) {
@@ -84,5 +76,5 @@ export function loop() {
       }
     });
   }
-  printGameInfo('Loop End');
+  // printGameInfo('Loop End');
 }

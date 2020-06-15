@@ -65,11 +65,11 @@ export class Colony implements IColony {
   droppedResources: Resource[] = [];
 
   creeps: _Creep[];
-  // creepsByRole: { [role: number]: Creep[] } = {
-  //   [CreepRole.Harvester]: [],
-  //   [CreepRole.Upgrader]: [],
-  //   [CreepRole.Builder]: []
-  // };
+  creepsByRole: { [role: number]: Creep[] } = {
+    [CreepRole.Harvester]: [],
+    [CreepRole.Upgrader]: [],
+    [CreepRole.Builder]: []
+  };
   completedBuilders: Creep[] = [];
   spawnRequestQueue: SpawnRequestQueue;
   constructionOrders: ConstructionDirective[] = [];
@@ -138,15 +138,21 @@ export class Colony implements IColony {
       this.harvestableSources.push(_source);
       this.sources.push(_source);
     });
-    console.log('sources:', this.sources.length);
-    console.log('harvestable sources:', this.harvestableSources.length);
+    // console.log('sources:', this.sources.length);
+    // console.log('harvestable sources:', this.harvestableSources.length);
 
-    this.droppedResources = this.room.find(FIND_DROPPED_RESOURCES);
-
+    // this.droppedResources = this.room.find(FIND_DROPPED_RESOURCES);
     this.creeps = this.room.find(FIND_MY_CREEPS).map((_creep) => {
       switch (_creep.memory.role) {
         case CreepRole.Harvester:
-          return new HarvesterCreep(_creep.id, this.room.name);
+          const harvCreep = new HarvesterCreep(_creep.id, this.room.name);
+          this.creepsByRole[CreepRole.Harvester].push(harvCreep);
+          return harvCreep;
+
+        case CreepRole.Upgrader:
+          const upgCreep = new UpgraderCreep(_creep.id, this.room.name);
+          this.creepsByRole[CreepRole.Upgrader].push(upgCreep);
+          return upgCreep;
 
         default:
           break;
@@ -168,12 +174,23 @@ export class Colony implements IColony {
       if (!spawner.spawning) {
         console.log('not spawning');
         // TODO: define spawn need
-        if (this.creeps.length < 2) {
+        if (this.creepsByRole[CreepRole.Harvester].length < 2) {
           console.log('spawning harvester');
           spawnHarvesterCreep(
             spawner,
             {
               type: CreepRole.Harvester, // This is useless atm
+              priority: 0,
+              body: [WORK, MOVE, CARRY, CARRY]
+            },
+            { energyStructures: [spawner].concat(this.extensions as any) }
+          );
+        } else if (this.creepsByRole[CreepRole.Upgrader].length < 1) {
+          console.log('spawning upgrader');
+          SpawnUpgraderCreep(
+            spawner,
+            {
+              type: CreepRole.Upgrader,
               priority: 0,
               body: [WORK, MOVE, CARRY, CARRY]
             },

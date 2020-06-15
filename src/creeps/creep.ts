@@ -50,7 +50,7 @@ export interface ITask<T = any> {
     | 'upgrade'
     | 'pickup';
   target?: Id<T>;
-  repeatable: boolean;
+  repeatable?: boolean;
 }
 
 export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
@@ -132,7 +132,7 @@ export function areRoomPositionsEqual(
   pos2: RoomPosition
 ): boolean {
   return (
-    pos1.roomName !== pos2.roomName || pos1.x !== pos2.x || pos1.y !== pos2.y
+    pos1.roomName === pos2.roomName && pos1.x === pos2.x && pos1.y === pos2.y
   );
 }
 
@@ -147,6 +147,10 @@ export abstract class _Creep extends Creep {
   }
   protected set tasks(_tasks) {
     this.memory.tasks = _tasks;
+  }
+
+  public get type() {
+    return this.memory && this.memory.role;
   }
 
   protected setNextTask() {
@@ -257,7 +261,7 @@ export abstract class _Creep extends Creep {
 
   public log(message: string): void {
     // TODO: add debug configuration
-    log(`${this.name} ${message}`, 'Creep');
+    log(`${this.type} ${this.name} ${message}`, 'Creep');
   }
 
   public run(): boolean {
