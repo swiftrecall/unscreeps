@@ -1,11 +1,126 @@
-import { CreepState, CreepRole, _Creep } from './creep';
+import {
+  CreepState,
+  CreepRole,
+  _Creep,
+  ITask,
+  SetupCommonCreepCostMatrix
+} from './creep';
 import { ID } from '../util';
 
 export class UpgraderCreep extends _Creep {
-  setup(): void {}
+  setup(): void {
+    if (this.tasks.length === 0) {
+      const tasks: ITask[] = [];
+      if (!this.memory.assignedSource) {
+        this.memory.assignedSource = this.colony.harvestableSources[0].id;
+      }
+
+      tasks.push({ action: 'harvest', target: this.memory.assignedSource });
+      tasks.push({ action: 'transfer', target: this.colony.controllers[0].id });
+
+      this.memory.routing = {
+        route: PathFinder.search(
+          this.pos,
+          { pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
+          {
+            roomCallback: function (roomName) {
+              return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+            }
+          }
+        ).path,
+        reached: false,
+        currentPosition: 0
+      };
+
+      this.tasks = tasks;
+    }
+  }
 
   execute(): boolean {
-    throw new Error('Method not implemented.');
+    this.log('execute');
+    if (!this.tasks[this.currentTask]) {
+      throw new Error('No tasks available');
+    }
+
+    const { action, target } = this.tasks[this.currentTask];
+
+    let targetObject = Game.getObjectById(target);
+
+    if (!targetObject) {
+      this.tasks.splice(this.currentTask, 1);
+      throw new Error(`No target for ${action} task`);
+    }
+
+    let actionReturnCode: ScreepsReturnCode;
+    if (action === 'transfer') {
+      actionReturnCode = this.transfer(targetObject, RESOURCE_ENERGY);
+    } else if (action === 'harvest') {
+      actionReturnCode = this.harvest(targetObject);
+    } else if (action === 'withdraw') {
+      actionReturnCode = this.withdraw(targetObject, RESOURCE_ENERGY);
+    }
+
+    this.log(`actionReturnCode: ${actionReturnCode}`);
+    switch (actionReturnCode) {
+      case OK:
+        if (action === 'transfer' && this.store[RESOURCE_ENERGY] === 0) {
+          this.setNextTask();
+        } else if (
+          action === 'harvest' &&
+          this.carryCapacity === this.store[RESOURCE_ENERGY]
+        ) {
+          this.setNextTask();
+        }
+        return true;
+
+      case ERR_NOT_OWNER:
+        this.log(`failed to ${action} because target is unowned`);
+        this.setNextTask();
+        return true;
+
+      case ERR_NOT_IN_RANGE:
+        const pathFinderPath = PathFinder.search(
+          this.pos,
+          { pos: targetObject.pos, range: 1 },
+          {
+            roomCallback: function (roomName) {
+              return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+            }
+          }
+        );
+        if (pathFinderPath.incomplete) {
+          return true;
+        } else {
+          this.memory.routing.reached = false;
+          this.memory.routing.route = pathFinderPath.path;
+          return this.moveRoute();
+        }
+
+      case ERR_NOT_ENOUGH_RESOURCES:
+        if (action === 'transfer') {
+          this.setNextTask();
+        }
+        return true;
+
+      case ERR_TIRED:
+        return true;
+
+      case ERR_FULL:
+        return true;
+
+      case ERR_NOT_FOUND:
+        this.log(`${actionReturnCode} for ${action}. Removing tasks.`);
+        this.setNextTask();
+        return true;
+
+      case ERR_INVALID_TARGET:
+        this.log(`${actionReturnCode} for ${action}. Removing tasks.`);
+        this.setNextTask();
+        return true;
+
+      default:
+        throw new Error(`Unhandled ${action} result: ${actionReturnCode}`);
+    }
   }
 }
 
@@ -28,7 +143,7 @@ export function SpawnUpgraderCreep(
     if (++attempt > 10) {
       return ERR_NAME_EXISTS;
     }
-    name = `harv_${ID}`;
+    name = `upg_${ID}`;
   }
   return spawnReturnCode;
 }

@@ -86,7 +86,7 @@ export class HarvesterCreep extends _Creep {
     }
 
     if (!target) {
-      this.tasks.unshift();
+      this.tasks.splice(this.currentTask, 1);
       throw new Error(`No target for ${task.action} task`);
     }
 
@@ -106,6 +106,7 @@ export class HarvesterCreep extends _Creep {
       actionReturnCode = this.withdraw(target, this.memory.resource);
     }
 
+    this.log(`actionReturnCode: ${actionReturnCode}`);
     switch (actionReturnCode) {
       case OK:
         this.log('OK');
@@ -164,7 +165,7 @@ export class HarvesterCreep extends _Creep {
         this.log('Waiting until target needs resources');
         return true;
 
-      case ERR_NOT_FOUND || ERR_INVALID_TARGET || ERR_FULL:
+      case ERR_NOT_FOUND || ERR_INVALID_TARGET:
         // TODO: handle what to do with remaining resource
         // - should certain task been chainable/tied together
         // - clean up action at the end of the task queue?
@@ -182,55 +183,6 @@ export class HarvesterCreep extends _Creep {
     }
   }
 }
-
-/**
- * TODO: fix movement logic so once creeps get close enough but are blocked they don't recalculate their path
- */
-// export function FHarvesterCreep(creep: Creep): void {
-//   switch (creep.memory.state) {
-//     case CreepState.Harvesting:
-//       if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
-//         creep.memory.state = CreepState.Delivering;
-//       } else {
-//         const source = Game.getObjectById(creep.memory.source);
-//         if (!source) {
-//           console.log(`Creep ${creep.id} source cannot be found`);
-//         } else {
-//           const harvestResult = creep.harvest(source);
-//           if (harvestResult === ERR_NOT_IN_RANGE) {
-//             creep.moveTo(source, {
-//               maxOps: 500, // TODO: test what happens when maxOps is reached
-//               range: 1,
-//               visualizePathStyle: CreepPathVisualization
-//             });
-//           }
-//         }
-//         break;
-//       }
-//     case CreepState.Delivering:
-//       if (creep.store[RESOURCE_ENERGY] === 0) {
-//         creep.memory.state = CreepState.Harvesting;
-//       } else {
-//         const target = Game.getObjectById(creep.memory.target);
-//         if (!target) {
-//           console.log(`Creep ${creep.id} target cannot be found`);
-//         } else {
-//           const transferResult = creep.transfer(target, RESOURCE_ENERGY);
-//           if (transferResult === ERR_NOT_IN_RANGE) {
-//             creep.moveTo(target, {
-//               maxOps: 500,
-//               range: 1,
-//               visualizePathStyle: CreepPathVisualization
-//             });
-//           }
-//         }
-//       }
-//       break;
-//     default:
-//       console.log(`Creep: ${creep.id} has no state`);
-//       break;
-//   }
-// }
 
 export function spawnHarvesterCreep(
   spawner: StructureSpawn,
