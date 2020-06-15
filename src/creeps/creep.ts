@@ -150,13 +150,12 @@ export abstract class _Creep extends Creep {
     this.memory.tasks = _tasks;
   }
 
-<<<<<<< HEAD
   public getCurrentTask(): ITask | null {
     return this.tasks[this.currentTask] || null;
-=======
+  }
+  
   public get type() {
     return this.memory && this.memory.role;
->>>>>>> 95502d754372d6d8ba0c7fc668b1f7404578f379
   }
 
   protected setNextTask() {
