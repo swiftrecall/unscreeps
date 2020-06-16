@@ -24,14 +24,12 @@ export class HarvesterCreep extends _Creep {
 
       tasks.push({
         action: 'harvest',
-        target: this.memory.assignedSource,
-        repeatable: true
+        target: this.memory.assignedSource
       });
 
       tasks.push({
         action: 'transfer',
-        target: this.colony.spawners[0].id,
-        repeatable: true
+        target: this.colony.spawners[0].id
       });
 
       this.memory.routing = {
@@ -112,7 +110,10 @@ export class HarvesterCreep extends _Creep {
         this.log('OK');
         if (task.action === 'harvest' && this.isFull()) {
           this.setNextTask();
-        } else if (task.action === 'transfer' && this.store[RESOURCE_ENERGY] === 0) {
+        } else if (
+          task.action === 'transfer' &&
+          this.store[RESOURCE_ENERGY] === 0
+        ) {
           this.setNextTask();
         }
         return true;

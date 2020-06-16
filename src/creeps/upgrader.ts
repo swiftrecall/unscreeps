@@ -12,7 +12,7 @@ export class UpgraderCreep extends _Creep {
     if (this.tasks.length === 0) {
       const tasks: ITask[] = [];
       if (!this.memory.assignedSource) {
-        this.memory.assignedSource = this.colony.harvestableSources[0].id;
+        this.memory.assignedSource = this.colony.sources[0].id;
       }
 
       tasks.push({ action: 'harvest', target: this.memory.assignedSource });
@@ -31,6 +31,12 @@ export class UpgraderCreep extends _Creep {
         reached: false,
         currentPosition: 0
       };
+
+      try {
+        this.log(JSON.stringify(this.memory.routing.route));
+      } catch (e) {
+        this.log(e.stack);
+      }
 
       this.tasks = tasks;
     }
@@ -60,7 +66,7 @@ export class UpgraderCreep extends _Creep {
       actionReturnCode = this.withdraw(targetObject, RESOURCE_ENERGY);
     }
 
-    this.log(`actionReturnCode: ${actionReturnCode}`);
+    this.log(`${action} - ReturnCode: ${actionReturnCode}`);
     switch (actionReturnCode) {
       case OK:
         if (action === 'transfer' && this.store[RESOURCE_ENERGY] === 0) {

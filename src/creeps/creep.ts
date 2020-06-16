@@ -158,24 +158,19 @@ export abstract class _Creep extends Creep {
   }
 
   protected setNextTask() {
-    if (!this.tasks[this.currentTask].repeatable) {
-      // TODO: fix this, could lead to infinite loop of doing the same task if not careful
-      this.tasks.push(this.tasks.shift());
-      this.log(`repeated task: ${JSON.stringify(this.tasks)}`);
-    } else {
-      this.currentTask++;
-    }
-
-    if (this.currentTask >= this.tasks.length) {
-      this.currentTask = 0;
-    }
+    this.log(`completed: ${this.tasks.shift()}`);
+    // this.currentTask += 1;
+    // if (this.currentTask >= this.tasks.length) {
+    //   this.currentTask = 0;
+    // }
 
     if (this.tasks[this.currentTask] && this.tasks[this.currentTask].target) {
       const target = Game.getObjectById(this.tasks[this.currentTask].target);
       if (target) {
         this.memory.routing = {
           route: PathFinder.search(
-            this.pos, { pos: target.pos, range: 1},
+            this.pos,
+            { pos: target.pos, range: 1 },
             {
               roomCallback: function (roomName) {
                 return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
@@ -184,7 +179,7 @@ export abstract class _Creep extends Creep {
           ).path,
           reached: false,
           currentPosition: 0
-        }
+        };
       } else {
         this.log('Next task target does not exist');
       }
@@ -257,13 +252,6 @@ export abstract class _Creep extends Creep {
     this.log(
       `curr: ${JSON.stringify(this.pos)} | routePos: ${route[currentPosition]}`
     );
-    if (!areRoomPositionsEqual(route[currentPosition], this.pos)) {
-      console.log('!areRoomPositionsEqual');
-      route.splice(currentPosition, 0, this.pos);
-      this.memory.routing.route = route;
-    } else {
-      console.log('room positions are equal');
-    }
 
     if (currentPosition + 1 < route.length) {
       this.log('initiating move');

@@ -2,9 +2,7 @@ import { SpawnRequestQueue } from './spawner';
 import { HarvesterCreep, spawnHarvesterCreep } from './creeps/harvester';
 import { CreepRole, _Creep } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
-import {
-  ConstructionDirective
-} from './creeps/builder';
+import { ConstructionDirective } from './creeps/builder';
 import { _Source } from './source';
 import _ from 'lodash';
 
@@ -117,9 +115,9 @@ export class Colony implements IColony {
       }
     });
 
-    this.room.find(FIND_MY_CONSTRUCTION_SITES).forEach((constructionSite) => {
-      if (this.memory.constructionSites)
-    })
+    // this.room.find(FIND_MY_CONSTRUCTION_SITES).forEach((constructionSite) => {
+    //   if (this.memory.constructionSites)
+    // })
 
     this.room.find(FIND_SOURCES).map((value) => {
       const _source = new _Source(value);
@@ -192,5 +190,4 @@ export class Colony implements IColony {
       creep.run();
     });
   }
-
 }
