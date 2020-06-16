@@ -17,8 +17,8 @@ export class HarvesterCreep extends _Creep {
       // create tasks for creep
       // find sources that can be harvested
       if (!this.memory.assignedSource) {
-        if (this.colony.harvestableSources.length) {
-          this.memory.assignedSource = this.colony.harvestableSources[0].id;
+        if (this.colony.sources.length) {
+          this.memory.assignedSource = this.colony.sources[0].id;
         }
       }
 

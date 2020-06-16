@@ -1,7 +1,6 @@
 import { log, error } from '../util';
 import { Colony } from '../colony';
 import global_ from '../global';
-// import { global_ } from '../main';
 
 export enum CreepRole {
   Harvester,
@@ -153,7 +152,7 @@ export abstract class _Creep extends Creep {
   public getCurrentTask(): ITask | null {
     return this.tasks[this.currentTask] || null;
   }
-  
+
   public get type() {
     return this.memory && this.memory.role;
   }
@@ -210,11 +209,6 @@ export abstract class _Creep extends Creep {
   abstract execute(): boolean;
 
   public get colony(): Colony {
-    console.log(
-      'get colony: ',
-      this.memory.colony,
-      JSON.stringify(global_.colonies[this.memory.colony])
-    );
     return global_.colonies[this.memory.colony];
   }
 

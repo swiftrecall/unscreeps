@@ -1,12 +1,9 @@
 import { SpawnRequestQueue } from './spawner';
-import { ID } from './util';
 import { HarvesterCreep, spawnHarvesterCreep } from './creeps/harvester';
-import { CreepRole, CreepState, _Creep } from './creeps/creep';
+import { CreepRole, _Creep } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
 import {
-  BuilderCreep,
-  ConstructionDirective,
-  SpawnBuilderCreep
+  ConstructionDirective
 } from './creeps/builder';
 import { _Source } from './source';
 import _ from 'lodash';
@@ -19,7 +16,7 @@ export interface ColonyMemory extends IColonyMemory {
   spawnRequestQueue?: string;
   sources?: string[];
   controllers?: string[];
-  constructionOrders?: string[];
+  constructionSites?: { [key: string]: any };
   extensions?: string[];
 }
 
@@ -61,8 +58,9 @@ export class Colony implements IColony {
   controllers: StructureController[] = [];
   extensions: StructureExtension[] = [];
   sources: _Source[] = [];
-  harvestableSources: _Source[] = [];
+  // harvestableSources: _Source[] = [];
   droppedResources: Resource[] = [];
+  constructionSites: ConstructionSite[] = [];
 
   creeps: _Creep[];
   creepsByRole: { [role: number]: Creep[] } = {
@@ -70,9 +68,6 @@ export class Colony implements IColony {
     [CreepRole.Upgrader]: [],
     [CreepRole.Builder]: []
   };
-  completedBuilders: Creep[] = [];
-  spawnRequestQueue: SpawnRequestQueue;
-  constructionOrders: ConstructionDirective[] = [];
 
   get state() {
     return this.memory.state;
@@ -103,8 +98,6 @@ export class Colony implements IColony {
     // this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
 
     // spawners
-    this.spawners = [];
-    this.controllers = [];
     this.room.find(FIND_MY_STRUCTURES).forEach((structure) => {
       switch (structure.structureType) {
         case STRUCTURE_SPAWN:
@@ -124,18 +117,13 @@ export class Colony implements IColony {
       }
     });
 
-    this.room.find(FIND_SOURCES).forEach((source) => {
-      const _source = new _Source(source);
-      let index = this.sources.length;
-      for (; index > 0; index--) {
-        if (this.sources[index].harvestPriority < _source.harvestPriority) {
-          this.sources.splice(index, 0, _source);
-        }
-      }
-    });
+    this.room.find(FIND_MY_CONSTRUCTION_SITES).forEach((constructionSite) => {
+      if (this.memory.constructionSites)
+    })
+
     this.room.find(FIND_SOURCES).map((value) => {
       const _source = new _Source(value);
-      this.harvestableSources.push(_source);
+      // this.harvestableSources.push(_source);
       this.sources.push(_source);
     });
     // console.log('sources:', this.sources.length);

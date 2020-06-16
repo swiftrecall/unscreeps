@@ -1,5 +1,19 @@
 import { ID } from '../util';
-import { CreepRole, CreepState, CreepPathVisualization } from './creep';
+import { CreepRole, CreepState, CreepPathVisualization, _Creep } from './creep';
+
+
+export class BuilderCreep extends _Creep {
+  setup(): void {
+    if (this.tasks.length === 0) {
+
+    }
+  }
+  execute(): boolean {
+    return true;
+  }
+
+}
+
 
 /**
  * Handles a rooms contruction projects
@@ -60,78 +74,78 @@ export function SpawnBuilderCreep(
   return spawnReturnCode;
 }
 
-export function BuilderCreep(creep: Creep): void {
-  console.log('builder state:', creep.memory.state);
-  switch (creep.memory.state) {
-    case CreepState.Harvesting:
-      if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
-        creep.memory.state = CreepState.Delivering;
-      } else {
-        const source = Game.getObjectById(creep.memory.source);
-        if (!source) {
-          console.log(`Creep ${creep.id} source cannot be found`);
-        } else {
-          const harvestResult = creep.harvest(source);
-          if (harvestResult === ERR_NOT_IN_RANGE) {
-            creep.moveTo(source, {
-              visualizePathStyle: {
-                fill: 'transparent',
-                stroke: '#fff',
-                lineStyle: 'dashed',
-                strokeWidth: 0.15,
-                opacity: 0.1
-              }
-            });
-          } else if (harvestResult === ERR_INVALID_TARGET) {
-            creep.memory.state = CreepState.Complete;
-          }
-        }
-        break;
-      }
-    // if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
-    //   creep.memory.state = CreepState.Delivering;
-    // } else {
-    //   const source = Game.getObjectById(creep.memory.source as unknown as Id<StructureSpawn>);
-    //   if (!source) {
-    //     console.log(`Creep ${creep.id} source cannot be found`);
-    //     creep.memory.state = CreepState.Complete;
-    //   } else {
-    //     const withdrawResult = creep.withdraw(source, RESOURCE_ENERGY);
-    //     console.log('builder withdraw result:', withdrawResult);
-    //     if (withdrawResult === ERR_NOT_IN_RANGE) {
-    //       creep.moveTo(source, { visualizePathStyle: CreepPathVisualization} as MoveToOpts);
-    //     }
-    //   }
-    //   break;
-    // }
-    case CreepState.Delivering:
-      if (creep.store[RESOURCE_ENERGY] === 0) {
-        // move to source
-        creep.memory.state = CreepState.Harvesting;
-      } else {
-        const target = Game.getObjectById(
-          (creep.memory.target as unknown) as Id<ConstructionSite>
-        );
-        if (!target) {
-          console.log(`Creep ${creep.id} has no contruction site`);
-          creep.memory.target = null;
-          creep.memory.state = CreepState.Complete;
-        } else {
-          const buildResult = creep.build(target);
-          console.log('builder build result:', buildResult);
-          if (buildResult === ERR_NOT_ENOUGH_RESOURCES) {
-            creep.memory.state = CreepState.Harvesting;
-          } else if (buildResult === ERR_NOT_IN_RANGE) {
-            creep.moveTo(target, {
-              visualizePathStyle: CreepPathVisualization
-            } as MoveToOpts);
-          }
-        }
-      }
-      break;
-    default:
-      console.log(`Creep: ${creep.id} has no state`);
-  }
-}
+// export function BuilderCreep(creep: Creep): void {
+//   console.log('builder state:', creep.memory.state);
+//   switch (creep.memory.state) {
+//     case CreepState.Harvesting:
+//       if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
+//         creep.memory.state = CreepState.Delivering;
+//       } else {
+//         const source = Game.getObjectById(creep.memory.source);
+//         if (!source) {
+//           console.log(`Creep ${creep.id} source cannot be found`);
+//         } else {
+//           const harvestResult = creep.harvest(source);
+//           if (harvestResult === ERR_NOT_IN_RANGE) {
+//             creep.moveTo(source, {
+//               visualizePathStyle: {
+//                 fill: 'transparent',
+//                 stroke: '#fff',
+//                 lineStyle: 'dashed',
+//                 strokeWidth: 0.15,
+//                 opacity: 0.1
+//               }
+//             });
+//           } else if (harvestResult === ERR_INVALID_TARGET) {
+//             creep.memory.state = CreepState.Complete;
+//           }
+//         }
+//         break;
+//       }
+//     // if (creep.store[RESOURCE_ENERGY] >= creep.carryCapacity) {
+//     //   creep.memory.state = CreepState.Delivering;
+//     // } else {
+//     //   const source = Game.getObjectById(creep.memory.source as unknown as Id<StructureSpawn>);
+//     //   if (!source) {
+//     //     console.log(`Creep ${creep.id} source cannot be found`);
+//     //     creep.memory.state = CreepState.Complete;
+//     //   } else {
+//     //     const withdrawResult = creep.withdraw(source, RESOURCE_ENERGY);
+//     //     console.log('builder withdraw result:', withdrawResult);
+//     //     if (withdrawResult === ERR_NOT_IN_RANGE) {
+//     //       creep.moveTo(source, { visualizePathStyle: CreepPathVisualization} as MoveToOpts);
+//     //     }
+//     //   }
+//     //   break;
+//     // }
+//     case CreepState.Delivering:
+//       if (creep.store[RESOURCE_ENERGY] === 0) {
+//         // move to source
+//         creep.memory.state = CreepState.Harvesting;
+//       } else {
+//         const target = Game.getObjectById(
+//           (creep.memory.target as unknown) as Id<ConstructionSite>
+//         );
+//         if (!target) {
+//           console.log(`Creep ${creep.id} has no contruction site`);
+//           creep.memory.target = null;
+//           creep.memory.state = CreepState.Complete;
+//         } else {
+//           const buildResult = creep.build(target);
+//           console.log('builder build result:', buildResult);
+//           if (buildResult === ERR_NOT_ENOUGH_RESOURCES) {
+//             creep.memory.state = CreepState.Harvesting;
+//           } else if (buildResult === ERR_NOT_IN_RANGE) {
+//             creep.moveTo(target, {
+//               visualizePathStyle: CreepPathVisualization
+//             } as MoveToOpts);
+//           }
+//         }
+//       }
+//       break;
+//     default:
+//       console.log(`Creep: ${creep.id} has no state`);
+//   }
+// }
 
 export function BuilderCreepAssign(creep: Creep) {}
