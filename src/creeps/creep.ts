@@ -38,16 +38,17 @@ export const CreepPathVisualization: PolyStyle = {
   opacity: 0.1
 };
 
+export type CreepTaskAction =
+  | 'transfer'
+  | 'harvest'
+  | 'withdraw'
+  | 'attack'
+  | 'repair'
+  | 'build'
+  | 'upgrade'
+  | 'pickup';
 export interface ITask<T = any> {
-  action:
-    | 'transfer'
-    | 'harvest'
-    | 'withdraw'
-    | 'attack'
-    | 'repair'
-    | 'build'
-    | 'upgrade'
-    | 'pickup';
+  action: CreepTaskAction;
   target?: Id<T>;
   repeatable?: boolean;
 }
@@ -276,6 +277,17 @@ export abstract class _Creep extends Creep {
 
     return true;
   }
+
+  // protected moveOnRoute({route, currentPosition}: {route: RoomPosition[], currentPosition: number}): boolean {
+  //   if (currentPosition + 1 < route.length) {
+  //     const direction = getDirection(this.pos, route[currentPosition + 1]);
+  //     const moveResult = this.move(direction);
+
+  //     if (moveResult === OK) {
+  //       this.memory
+  //     }
+  //   }
+  // }
 
   public log(message: string): void {
     // TODO: add debug configuration

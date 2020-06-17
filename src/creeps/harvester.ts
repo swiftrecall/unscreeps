@@ -1,5 +1,11 @@
 import { ID } from '../util';
-import { CreepRole, _Creep, SetupCommonCreepCostMatrix, ITask } from './creep';
+import {
+  CreepRole,
+  _Creep,
+  SetupCommonCreepCostMatrix,
+  ITask,
+  CreepTaskAction
+} from './creep';
 import global_ from '../global';
 
 export class HarvesterCreep extends _Creep {
@@ -181,6 +187,100 @@ export class HarvesterCreep extends _Creep {
         throw new Error(
           `Unhandled harvester ${task.action} result: ${actionReturnCode}`
         );
+    }
+  }
+
+  private buildRoad(
+    action: CreepTaskAction,
+    target?: Id<ConstructionSite>
+  ): boolean {
+    /**
+     * TODO: figure out best way to maintain route
+     * TODO: finish build execution
+     */
+
+    if (
+      !this.memory.routing ||
+      !this.memory.routing.route ||
+      this.memory.routing.route.length === 0 ||
+      this.store[RESOURCE_ENERGY] === 0
+    ) {
+      this.setNextTask();
+      return true;
+    }
+
+    if (this.memory.routing.currentPosition == null) {
+      this.memory.routing.currentPosition = 0;
+    }
+
+    if (this.memory.routing.reached === true) {
+    }
+
+    // find build target along its route
+    // check if it has build target along its route
+    if (!target) {
+      // look ahead of current position?
+      // let constructionTarget;
+      for (
+        let i = this.memory.routing.currentPosition;
+        i < this.memory.routing.route.length;
+        i++
+      ) {
+        let posObjects = this.room.lookAt(this.memory.routing.route[i]);
+        if (posObjects && posObjects.length > 0) {
+          const roadConstructionSiteLookResult = posObjects.find((value) => {
+            return (
+              value.constructionSite &&
+              value.constructionSite.structureType === STRUCTURE_ROAD
+            );
+          });
+          if (roadConstructionSiteLookResult) {
+            target = roadConstructionSiteLookResult.constructionSite.id;
+            this.memory.routing.targetIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (!target) {
+        // if nothing ahead, reverse route
+        this.memory.routing.route = this.memory.routing.route.reverse();
+        this.memory.routing.currentPosition =
+          this.memory.routing.route.length -
+          1 -
+          this.memory.routing.currentPosition;
+
+        for (
+          let i = this.memory.routing.currentPosition;
+          i < this.memory.routing.route.length;
+          i++
+        ) {
+          let posObjects = this.room.lookAt(this.memory.routing.route[i]);
+          if (posObjects && posObjects.length > 0) {
+            const roadConstructionSiteLookResult = posObjects.find(
+              (value) =>
+                value.constructionSite &&
+                value.constructionSite.structureType === STRUCTURE_ROAD
+            );
+            if (roadConstructionSiteLookResult) {
+              target = roadConstructionSiteLookResult.constructionSite.id;
+              this.memory.routing.targetIndex = i;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // if nothing found; remove task
+    if (!target) {
+      // TODO: set flag so road build task is no longer set
+      this.setNextTask();
+      return true;
+    } else {
+      // check distance from build target
+      // move if not in range
+      // execute build
     }
   }
 }

@@ -23,4 +23,5 @@ interface Routing {
   reached?: boolean;
   route?: RoomPosition[];
   currentPosition?: number;
+  targetIndex?: number;
 }
