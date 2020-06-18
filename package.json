@@ -1,29 +1,31 @@
 {
-  "name": "unscreeps",
-  "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
-  "scripts": {
-    "build": "rollup -c",
-    "push-local": "npm run build && npm run copy-local"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/swiftrecall/unscreeps.git"
-  },
-  "author": "Jesse Bandel",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/swiftrecall/unscreeps/issues"
-  },
-  "homepage": "https://github.com/swiftrecall/unscreeps#readme",
-  "devDependencies": {
-    "@rollup/plugin-typescript": "^4.1.2",
-    "@types/lodash": "^4.14.154",
-    "@types/screeps": "^3.1.2",
-    "rollup": "^2.12.0",
-    "tslib": "^2.0.0",
-    "typedoc": "^0.17.7",
-    "typescript": "^3.9.3"
-  }
+	"name": "unscreeps",
+	"version": "1.0.0",
+	"description": "",
+	"main": "main.js",
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "rollup -c",
+		"push": "npm run build && npm run copy"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/swiftrecall/unscreeps.git"
+	},
+	"author": "Jesse Bandel",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/swiftrecall/unscreeps/issues"
+	},
+	"homepage": "https://github.com/swiftrecall/unscreeps#readme",
+	"devDependencies": {
+		"@rollup/plugin-typescript": "^4.1.2",
+		"@types/lodash": "^4.14.154",
+		"@types/screeps": "^3.1.2",
+		"prettier": "^2.0.5",
+		"rollup": "^2.12.0",
+		"tslib": "^2.0.0",
+		"typedoc": "^0.17.7",
+		"typescript": "^3.9.3"
+	}
 }

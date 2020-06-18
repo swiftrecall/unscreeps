@@ -1,27 +1,27 @@
 interface CreepMemory {
-  // should be determinable by the class instance
-  role: any;
-  state: any;
-  routing: Routing;
-  recycle: boolean;
-  tasks: any;
-  lastPositions?: RoomPosition[];
-  resource?: ResourceConstant;
-  colony: string;
-  assignedSource?: Id<Source>;
+	// should be determinable by the class instance
+	role: any;
+	state: any;
+	routing: Routing;
+	recycle: boolean;
+	tasks: any;
+	lastPositions?: RoomPosition[];
+	resource?: ResourceConstant;
+	colony: string;
+	assignedSource?: Id<Source>;
 
-  // TODO: remove
-  source: Id<Source>;
-  target: Id<StructureSpawn>;
+	// TODO: remove
+	source: Id<Source>;
+	target: Id<StructureSpawn>;
 }
 
 interface Creep {
-  run(): void;
+	run(): void;
 }
 
 interface Routing {
-  reached?: boolean;
-  route?: RoomPosition[];
-  currentPosition?: number;
-  targetIndex?: number;
+	reached?: boolean;
+	route?: RoomPosition[];
+	currentPosition?: number;
+	targetIndex?: number;
 }

@@ -1,5 +1,5 @@
 const global_ = {
-  colonies: []
+	colonies: []
 };
 
 export default global_;
