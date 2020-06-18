@@ -1,12 +1,12 @@
 {
-  "compilerOptions": {
-    "target": "es2017",
-    "module": "esnext",
-    "moduleResolution": "Node",
-    "rootDir": "./src",
-    "removeComments": true,
-    "strict": false,
-    "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
-  }
+	"compilerOptions": {
+		"target": "es2017",
+		"module": "esnext",
+		"moduleResolution": "Node",
+		"rootDir": "./src",
+		"removeComments": true,
+		"strict": false,
+		"esModuleInterop": true,
+		"typeRoots": ["./node_modules/@types", "./types"]
+	}
 }
