@@ -153,6 +153,10 @@ export abstract class _Creep extends Creep {
     return this.tasks[this.currentTask] || null;
   }
 
+  public get routing() {
+    return this.memory && this.memory.routing;
+  }
+
   public get type() {
     return this.memory && this.memory.role;
   }
@@ -239,6 +243,9 @@ export abstract class _Creep extends Creep {
       this.memory.routing.reached = true;
     }
 
+    // attempts to build road on current position if creep type allows it
+    this.createRoadOnRoute();
+
     if (this.memory.routing.reached === true) {
       this.log('reached');
       return true;
@@ -311,6 +318,18 @@ export abstract class _Creep extends Creep {
       }
     } catch (e) {
       error(e, 'Creep');
+    }
+  }
+
+  abstract shouldPlaceRoads(): boolean;
+
+  private createRoadOnRoute(): void {
+    // check if creep should place route
+    if (this.shouldPlaceRoads()) {
+      const roadLike = this.room.lookAt(this.pos).filter((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));
+      if (roadLike.length === 0) {
+        this.room.createConstructionSite(this.pos, STRUCTURE_ROAD);
+      }
     }
   }
 }

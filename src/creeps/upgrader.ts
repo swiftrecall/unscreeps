@@ -12,7 +12,7 @@ export class UpgraderCreep extends _Creep {
     if (this.tasks.length === 0) {
       const tasks: ITask[] = [];
       if (!this.memory.assignedSource) {
-        this.memory.assignedSource = this.colony.harvestableSources[0].id;
+        this.memory.assignedSource = this.colony.sources[0].id;
       }
 
       tasks.push({ action: 'harvest', target: this.memory.assignedSource });
@@ -121,6 +121,10 @@ export class UpgraderCreep extends _Creep {
       default:
         throw new Error(`Unhandled ${action} result: ${actionReturnCode}`);
     }
+  }
+
+  shouldPlaceRoads(): boolean {
+    return true;
   }
 }
 

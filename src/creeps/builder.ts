@@ -12,6 +12,10 @@ export class BuilderCreep extends _Creep {
     return true;
   }
 
+  shouldPlaceRoads(): boolean {
+    return true;
+  }
+
 }
 
 

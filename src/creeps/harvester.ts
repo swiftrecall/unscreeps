@@ -182,6 +182,10 @@ export class HarvesterCreep extends _Creep {
         );
     }
   }
+
+  shouldPlaceRoads(): boolean {
+    return true;
+  }
 }
 
 export function spawnHarvesterCreep(
