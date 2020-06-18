@@ -1,6 +1,8 @@
 type Nullable<T> = T | null | undefined;
 
-interface IColonyMemory {}
+interface IColonyMemory {
+	roadService?: any;
+}
 
 interface Memory {
 	colonies: { [colonyName: string]: IColonyMemory };

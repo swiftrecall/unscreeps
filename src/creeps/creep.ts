@@ -119,7 +119,11 @@ export function areRoomPositionsEqual(pos1: RoomPosition, pos2: RoomPosition): b
 }
 
 export abstract class _Creep extends Creep {
-	protected currentTask: number = 0;
+	// protected currentTask: number = 0;
+
+	public get currentTask() {
+		return this.tasks && this.tasks.length > 0 ? this.tasks[0] : null;
+	}
 
 	protected get tasks() {
 		if (!this.memory.tasks) {
@@ -131,41 +135,17 @@ export abstract class _Creep extends Creep {
 		this.memory.tasks = _tasks;
 	}
 
-	public getCurrentTask(): ITask | null {
-		return this.tasks[this.currentTask] || null;
-	}
-
 	public get type() {
 		return this.memory && this.memory.role;
 	}
 
 	protected setNextTask() {
-		this.log(`completed: ${this.tasks.shift()}`);
+		const completedTask = this.tasks.shift();
+		this.log(`completed: ${completedTask}`);
 		// this.currentTask += 1;
 		// if (this.currentTask >= this.tasks.length) {
 		//   this.currentTask = 0;
 		// }
-
-		if (this.tasks[this.currentTask] && this.tasks[this.currentTask].target) {
-			const target = Game.getObjectById(this.tasks[this.currentTask].target);
-			if (target) {
-				this.memory.routing = {
-					route: PathFinder.search(
-						this.pos,
-						{ pos: target.pos, range: 1 },
-						{
-							roomCallback: function (roomName) {
-								return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-							}
-						}
-					).path,
-					reached: false,
-					currentPosition: 0
-				};
-			} else {
-				this.log('Next task target does not exist');
-			}
-		}
 	}
 
 	constructor(id: Id<Creep>, colonyName: string) {

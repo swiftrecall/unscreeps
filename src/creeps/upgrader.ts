@@ -38,16 +38,17 @@ export class UpgraderCreep extends _Creep {
 
 	execute(): boolean {
 		this.log('execute');
-		if (!this.tasks[this.currentTask]) {
+		if (!this.currentTask) {
 			throw new Error('No tasks available');
 		}
 
-		const { action, target } = this.tasks[this.currentTask];
+		const { action, target } = this.currentTask;
 
 		let targetObject = Game.getObjectById(target);
 
 		if (!targetObject) {
-			this.tasks.splice(this.currentTask, 1);
+			this.setNextTask();
+			// this.tasks.splice(this.currentTask, 1);
 			throw new Error(`No target for ${action} task`);
 		}
 

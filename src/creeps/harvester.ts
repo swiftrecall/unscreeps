@@ -1,6 +1,5 @@
 import { ID } from '../util';
-import { CreepRole, _Creep, SetupCommonCreepCostMatrix, ITask, CreepTaskAction } from './creep';
-import global_ from '../global';
+import { CreepRole, _Creep, SetupCommonCreepCostMatrix, CreepTaskAction } from './creep';
 
 export class HarvesterCreep extends _Creep {
 	public get resource() {
@@ -12,8 +11,7 @@ export class HarvesterCreep extends _Creep {
 			this.tasks = [];
 		}
 		if (this.tasks.length === 0) {
-			this.log('setting tasks');
-			const tasks: ITask[] = [];
+			// this.log('setting tasks');
 			// create tasks for creep
 			// find sources that can be harvested
 			if (!this.memory.assignedSource) {
@@ -22,20 +20,22 @@ export class HarvesterCreep extends _Creep {
 				}
 			}
 
-			tasks.push({
+			this.tasks.push({
 				action: 'harvest',
 				target: this.memory.assignedSource
 			});
 
-			tasks.push({
+			this.tasks.push({
 				action: 'transfer',
 				target: this.colony.spawners[0].id
 			});
+		}
 
+		if (this.currentTask && this.currentTask.target && (!this.memory.routing || !this.memory.routing.route)) {
 			this.memory.routing = {
 				route: PathFinder.search(
 					this.pos,
-					{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
+					{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
 					{
 						roomCallback: function (roomName) {
 							return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
@@ -45,8 +45,6 @@ export class HarvesterCreep extends _Creep {
 				reached: false,
 				currentPosition: 0
 			};
-
-			this.tasks = tasks;
 		}
 	}
 
@@ -57,17 +55,17 @@ export class HarvesterCreep extends _Creep {
 
 	execute(): boolean {
 		this.log('execute');
-		if (!this.tasks[this.currentTask]) {
+		if (!this.currentTask) {
 			// no tasks
 			// TODO: handle? currently will just exit
 			throw new Error('No tasks available');
 		}
 
-		if (this.tasks[this.currentTask].action === 'harvest' && this.isFull()) {
+		if (this.currentTask.action === 'harvest' && this.isFull()) {
 			this.setNextTask();
 		}
 
-		const task = this.tasks[this.currentTask];
+		const task = this.currentTask;
 
 		this.log(JSON.stringify(task));
 
@@ -77,7 +75,8 @@ export class HarvesterCreep extends _Creep {
 		}
 
 		if (!target) {
-			this.tasks.splice(this.currentTask, 1);
+			this.setNextTask();
+			// this.tasks.splice(this.currentTask, 1);
 			throw new Error(`No target for ${task.action} task`);
 		}
 
@@ -174,7 +173,13 @@ export class HarvesterCreep extends _Creep {
 		/**
 		 * TODO: figure out best way to maintain route
 		 * TODO: finish build execution
+		 * TODO: add flag so roading building doesn't have to be computed once it is completed
 		 */
+
+		if (this.store[RESOURCE_ENERGY] === 0) {
+			this.setNextTask();
+			return true;
+		}
 
 		if (!this.memory.routing || !this.memory.routing.route || this.memory.routing.route.length === 0 || this.store[RESOURCE_ENERGY] === 0) {
 			this.setNextTask();
