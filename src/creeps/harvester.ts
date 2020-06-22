@@ -1,9 +1,12 @@
-import { ID } from '../util';
-import { CreepRole, _Creep, SetupCommonCreepCostMatrix, CreepTaskAction } from './creep';
+import { CreepRole, _Creep, SetupCommonCreepCostMatrix } from './creep';
 
 export class HarvesterCreep extends _Creep {
-	public get resource() {
-		return this.memory.resource;
+	static spawn(spawn: StructureSpawn, energy: number, colony: string, energyStructures: StructureExtension[]): ScreepsReturnCode {
+		const memory = {
+			colony,
+			role: CreepRole.Harvester
+		};
+		return _Creep._spawn(spawn, energy, memory, energyStructures, [WORK, MOVE, CARRY], 200, 'harvester');
 	}
 
 	setup(): void {
@@ -11,15 +14,6 @@ export class HarvesterCreep extends _Creep {
 			this.tasks = [];
 		}
 		if (this.tasks.length === 0 && this.colony.sources.length > 0) {
-			// this.log('setting tasks');
-			// create tasks for creep
-			// find sources that can be harvested
-			// if (!this.memory.assignedSource) {
-			// 	if (this.colony.sources.length) {
-			// 		this.memory.assignedSource = this.colony.sources[0].id;
-			// 	}
-			// }
-
 			this.tasks.push({
 				action: 'harvest',
 				target: this.colony.sources[0].id
@@ -31,20 +25,29 @@ export class HarvesterCreep extends _Creep {
 			});
 		}
 
-		if (this.currentTask && this.currentTask.target && (!this.memory.routing || !this.memory.routing.route)) {
-			this.memory.routing = {
-				route: PathFinder.search(
-					this.pos,
-					{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
-					{
-						roomCallback: function (roomName) {
-							return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-						}
+		if (this.currentTask && this.currentTask.target && !this.memory.routing) {
+			this.memory.routing = PathFinder.search(
+				this.pos,
+				{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
+				{
+					roomCallback: function (roomName) {
+						return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
 					}
-				).path,
-				reached: false,
-				currentPosition: 0
-			};
+				}
+			);
+			// this.memory.routing = {
+			// 	route: PathFinder.search(
+			// 		this.pos,
+			// 		{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
+			// 		{
+			// 			roomCallback: function (roomName) {
+			// 				return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+			// 			}
+			// 		}
+			// 	).path,
+			// 	reached: false,
+			// 	currentPosition: 0
+			// };
 		}
 	}
 
@@ -91,7 +94,7 @@ export class HarvesterCreep extends _Creep {
 		} else if (task.action === 'harvest') {
 			actionReturnCode = this.harvest(target as Source | Mineral<MineralConstant>);
 		} else if (task.action === 'withdraw') {
-			actionReturnCode = this.withdraw(target, this.memory.resource);
+			// actionReturnCode = this.withdraw(target, this.memory.resource);
 		}
 
 		this.log(`actionReturnCode: ${actionReturnCode}`);
@@ -124,15 +127,18 @@ export class HarvesterCreep extends _Creep {
 					}
 				);
 
-				if (pathFinderPath.incomplete) {
-					// creep should wait here until a spot opens up
-					// TODO: need to evaluate if the creep is actually close to where it needs to go or not
-					return true;
-				} else {
-					this.memory.routing.reached = false;
-					this.memory.routing.route = pathFinderPath.path;
-					return this.moveRoute();
-				}
+				this.memory.routing = pathFinderPath;
+				return true;
+
+			// if (pathFinderPath.incomplete) {
+			// 	// creep should wait here until a spot opens up
+			// 	// TODO: need to evaluate if the creep is actually close to where it needs to go or not
+			// 	return true;
+			// } else {
+			// 	this.memory.routing.reached = false;
+			// 	this.memory.routing.route = pathFinderPath.path;
+			// 	return this.moveRoute();
+			// }
 
 			case ERR_NOT_ENOUGH_RESOURCES:
 				this.log('ERR_NOT_ENOUGH_RESOURCES');
@@ -151,8 +157,7 @@ export class HarvesterCreep extends _Creep {
 
 			case ERR_FULL:
 				if (this.colony.extensions.length) {
-
-					const next = this.pos.findClosestByPath(this.colony.extensions, { filter: (extension: StructureExtension) => extension.energy < extension.energyCapacity})
+					const next = this.pos.findClosestByPath(this.colony.extensions, { filter: (extension: StructureExtension) => extension.energy < extension.energyCapacity });
 
 					if (next != null) {
 						this.currentTask.target = next.id;
@@ -166,15 +171,16 @@ export class HarvesterCreep extends _Creep {
 								}
 							}
 						);
-		
-						// This can result in creeps getting stuck around the lowest filled item 
+						this.memory.routing = pathFinderPath;
+
+						// This can result in creeps getting stuck around the lowest filled item
 						// if (pathFinderPath.incomplete) {
 						// 	// creep should wait here until a spot opens up
 						// 	// TODO: need to evaluate if the creep is actually close to where it needs to go or not
 						// 	return true;
 						// } else {
-							this.memory.routing.reached = false;
-							this.memory.routing.route = pathFinderPath.path;
+						// this.memory.routing.reached = false;
+						// this.memory.routing.route = pathFinderPath.path;
 						// }
 					}
 				}
@@ -210,37 +216,4 @@ export class HarvesterCreep extends _Creep {
 	shouldPlaceRoads(): boolean {
 		return true;
 	}
-}
-
-export function spawnHarvesterCreep(spawner: StructureSpawn, spawnRequest: ICreepSpawnRequest, spawnOpts: SpawnOptions = {}, energy: number): ScreepsReturnCode {
-	let name = `harv_${ID()}`;
-	spawnOpts.memory = { ...spawnOpts.memory, role: CreepRole.Harvester };
-	spawnOpts.dryRun = true;
-
-	const bodyParts = [];
-	const numberOfBodyParts = Math.floor(energy / 200);
-
-	for (let i = 0; i < numberOfBodyParts; i++) {
-		bodyParts.push(WORK);
-		bodyParts.push(MOVE);
-		bodyParts.push(CARRY);
-		// bodyParts.concat(WORK, MOVE, CARRY);
-	}
-
-
-	let attempt = 0;
-	let spawnReturnCode: ScreepsReturnCode;
-	while ((spawnReturnCode = spawner.spawnCreep(bodyParts, name, spawnOpts)) === ERR_NAME_EXISTS) {
-		if (++attempt > 10) {
-			return ERR_NAME_EXISTS;
-		}
-		name = `harv_${ID}`;
-	}
-	if (spawnReturnCode === OK) {
-		console.log('dry run passed, executing');
-		spawnOpts.dryRun = false;
-		spawnReturnCode = spawner.spawnCreep(bodyParts, name, spawnOpts);
-	}
-	console.log('spawnReturnCode:', spawnReturnCode);
-	return spawnReturnCode;
 }

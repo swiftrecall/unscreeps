@@ -76,6 +76,7 @@ export function loop() {
 				delete Memory.creeps[creepId];
 			}
 		});
+
+		printGameInfo();
 	}
-	// printGameInfo('Loop End');
 }

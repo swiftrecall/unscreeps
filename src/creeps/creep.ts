@@ -1,4 +1,4 @@
-import { log, error } from '../util';
+import { log, error, ID } from '../util';
 import { Colony } from '../colony';
 import global_ from '../global';
 
@@ -119,7 +119,38 @@ export function areRoomPositionsEqual(pos1: RoomPosition, pos2: RoomPosition): b
 }
 
 export abstract class _Creep extends Creep {
-	// protected currentTask: number = 0;
+	protected static _spawn(spawn: StructureSpawn, energy: number, memory: CreepMemory, energyStructures: StructureExtension[], bodyPattern: BodyPartConstant[], energyDividend: number, namePrefix: string) {
+		let name = `${namePrefix}_${ID()}`;
+
+		const spawnOpts = {
+			memory,
+			energyStructures: [spawn].concat(energyStructures as any[]),
+			dryRun: true
+		};
+
+		const bodyParts = [];
+		const numberOfBodyParts = Math.floor(energy / energyDividend);
+
+		for (let i = 0; i < numberOfBodyParts; i++) {
+			for (let j = 0; j < bodyPattern.length; j++) {
+				bodyParts.push(bodyPattern[j]);
+			}
+		}
+
+		let attempt = 0;
+		let spawnReturnCode: ScreepsReturnCode;
+		while ((spawnReturnCode = spawn.spawnCreep(bodyParts, name, spawnOpts)) === ERR_NAME_EXISTS) {
+			if (++attempt > 10) {
+				return ERR_NAME_EXISTS;
+			}
+			name = `${namePrefix}_${ID()}`;
+		}
+		if (spawnReturnCode === OK) {
+			spawnOpts.dryRun = false;
+			spawnReturnCode = spawn.spawnCreep(bodyParts, name, spawnOpts);
+		}
+		return spawnReturnCode;
+	}
 
 	public get currentTask() {
 		return this.tasks && this.tasks.length > 0 ? this.tasks[0] : null;
@@ -148,10 +179,8 @@ export abstract class _Creep extends Creep {
 		// }
 	}
 
-	constructor(id: Id<Creep>, colonyName: string) {
+	constructor(id: Id<Creep>) {
 		super(id);
-		this.memory.colony = colonyName;
-		// console.log('setting colony:', this.memory.colony);
 	}
 
 	/**
@@ -174,11 +203,6 @@ export abstract class _Creep extends Creep {
 			return false;
 		}
 
-		if (this.memory.recycle) {
-			// run recycle process
-			return false;
-		}
-
 		return true;
 	}
 
@@ -192,93 +216,77 @@ export abstract class _Creep extends Creep {
 			return false;
 		}
 
-		if (!this.memory.routing.route || this.memory.routing.route.length === 0) {
-			this.memory.routing.reached = true;
-			// attempts to build road on current position if creep allows it
-			this.createRoadOnRoute();
-			return true;
-		}
+		this.createRoadOnRoute();
 
-		if (this.memory.routing.currentPosition == null || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
-			this.memory.routing.currentPosition = 0;
+		const moveResult = this.moveByPath(this.memory.routing.path);
+		this.log(`prior position: ${JSON.stringify(this.memory.routing.path[0])} | new position: ${JSON.stringify(this.pos)}`);
+		if (moveResult === ERR_NOT_FOUND) {
+			this.log('updating routing');
+			this.memory.routing = PathFinder.search(this.pos, { pos: this.memory.routing.path[this.memory.routing.path.length - 1], range: 1 });
+			this.log(JSON.stringify(this.memory.routing));
 		}
+		this.log(`moveResult: ${moveResult}`);
 
-		// while (!this.memory.routing.reached && this.fatigue <= 0) {
+		// if (!this.memory.routing.route || this.memory.routing.route.length === 0) {
+		// 	this.memory.routing.reached = true;
 		// 	// attempts to build road on current position if creep allows it
 		// 	this.createRoadOnRoute();
-
-		// 	if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
-		// 		this.log("current position doesn't match");
-		// 		this.log(JSON.stringify(this.memory.routing.route));
-		// 		this.log(JSON.stringify(this.pos));
-		// 		this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
-		// 	}
-
-		// 	let { route, currentPosition } = this.memory.routing;
-
-		// 	if (currentPosition + 1 < route.length) {
-		// 		this.log('initiating move');
-		// 		const direction = getDirection(this.pos, route[currentPosition + 1]);
-		// 		this.log('moving direction: ' + direction);
-		// 		const moveResult = this.move(direction);
-
-		// 		if (moveResult === OK) {
-		// 			this.memory.routing.currentPosition = this.memory.routing.currentPosition + 1;
-		// 			if (this.memory.routing.currentPosition === route.length - 1) {
-		// 				this.memory.routing.reached = true;
-		// 			}
-		// 		} else {
-		// 			this.log(`Could not completed move: ${moveResult}`);
-		// 		}
-		// 	} else {
-		// 		this.log('setting reached to true');
-		// 		this.memory.routing.reached = true;
-		// 	}
+		// 	return true;
 		// }
 
-		// return this.memory.routing.reached;
+		// if (this.memory.routing.currentPosition == null || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
+		// 	this.memory.routing.currentPosition = 0;
+		// }
 
-		if (this.memory.routing.reached === true) {
-			this.log('reached');
-			return true;
-		}
-		this.log('moveRoute');
-		if (!this.memory.routing.currentPosition || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
-			this.memory.routing.currentPosition = 0;
-		}
+		// if (this.memory.routing.reached === true) {
+		// 	this.log('reached');
+		// 	return true;
+		// }
+		// this.createRoadOnRoute();
 
-		if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
-			this.log("current position doesn't match");
-			this.log(JSON.stringify(this.memory.routing.route));
-			this.log(JSON.stringify(this.pos));
-			this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
-		}
+		// if (!this.memory.routing.currentPosition || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
+		// 	this.memory.routing.currentPosition = 0;
+		// }
 
-		const { route, currentPosition } = this.memory.routing;
+		// if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
+		// 	this.log("current position doesn't match");
+		// 	this.log(JSON.stringify(this.memory.routing.route));
+		// 	this.log(JSON.stringify(this.pos));
+		// 	this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
+		// }
 
-		this.log(`curr: ${JSON.stringify(this.pos)} | routePos: ${JSON.stringify(route[currentPosition + 1])}`);
+		// const { route, currentPosition } = this.memory.routing;
 
-		if (currentPosition + 1 < route.length) {
-			this.log('initiating move');
-			const direction = getDirection(this.pos, route[currentPosition + 1]);
-			this.log('moving direction: ' + direction);
-			const moveResult = this.move(direction);
+		// this.log(`curr: ${JSON.stringify(this.pos)} | routePos: ${JSON.stringify(route[currentPosition + 1])}`);
 
-			if (moveResult === OK) {
-				this.memory.routing.currentPosition = this.memory.routing.currentPosition + 1;
-				if (this.memory.routing.currentPosition === route.length - 1) {
-					this.memory.routing.reached = true;
-				}
-			} else {
-				this.log(`Could not completed move: ${moveResult}`);
-				return false;
-			}
-		} else {
-			this.log('setting reached to true');
-			this.memory.routing.reached = true;
-		}
+		// if (currentPosition + 1 < route.length) {
+		// 	this.log('initiating move');
+		// 	const direction = getDirection(this.pos, route[currentPosition + 1]);
+		// 	this.log('moving direction: ' + direction);
+		// 	const moveResult = this.move(direction);
 
-		return true;
+		// 	if (moveResult === OK) {
+		// 		this.memory.routing.currentPosition = this.memory.routing.currentPosition + 1;
+		// 		if (this.memory.routing.currentPosition === route.length - 1) {
+		// 			this.memory.routing.reached = true;
+		// 		}
+		// 	} else if ((moveResult as any) === ERR_INVALID_ARGS) {
+		// 		this.log(`Could not complete move because of invalid args\n\t${JSON.stringify(this.pos)}\n\t${JSON.stringify(route[currentPosition + 1])}\n\t${direction}`);
+		// 		// TODO: remove this once the routing bug is fixed
+		// 		if (route.length > 300) {
+		// 			this.log('suiciding because of extensive route');
+		// 			this.suicide();
+		// 		}
+		// 	} else {
+		// 		this.log(`Could not completed move: ${moveResult}`);
+		// 		return false;
+		// 	}
+		// } else {
+		// 	this.log('setting reached to true');
+		// 	this.memory.routing.reached = true;
+		// }
+
+		// return true;
 	}
 
 	public log(message: string): void {
@@ -296,7 +304,7 @@ export abstract class _Creep extends Creep {
 		try {
 			this.setup();
 
-			if (this.memory.routing && this.memory.routing.reached) {
+			if (this.memory.routing && this.memory.routing.path && this.memory.routing.path.length === 0) {
 				this.execute();
 			}
 
@@ -314,7 +322,7 @@ export abstract class _Creep extends Creep {
 		// check if creep should place route
 		if (this.shouldPlaceRoads()) {
 			this.log('placing road');
-			this.log(JSON.stringify(this.room.lookAt(this.pos)));
+			// this.log(JSON.stringify(this.room.lookAt(this.pos)));
 			const roadLike = this.room
 				.lookAt(this.pos)
 				.filter((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));

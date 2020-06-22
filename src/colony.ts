@@ -1,9 +1,9 @@
-import { HarvesterCreep, spawnHarvesterCreep } from './creeps/harvester';
+import { HarvesterCreep } from './creeps/harvester';
 import { CreepRole, _Creep } from './creeps/creep';
-import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
+import { UpgraderCreep } from './creeps/upgrader';
 import { _Source } from './source';
 import _ from 'lodash';
-import { BuilderCreep, SpawnBuilderCreep } from './creeps/builder';
+import { BuilderCreep } from './creeps/builder';
 
 export interface ColonyMemory extends IColonyMemory {
 	outposts: string[];
@@ -129,17 +129,17 @@ export class Colony implements IColony {
 		this.creeps = this.room.find(FIND_MY_CREEPS).map((_creep) => {
 			switch (_creep.memory.role) {
 				case CreepRole.Harvester:
-					const harvCreep = new HarvesterCreep(_creep.id, this.room.name);
+					const harvCreep = new HarvesterCreep(_creep.id);
 					this.creepsByRole[CreepRole.Harvester].push(harvCreep);
 					return harvCreep;
 
 				case CreepRole.Upgrader:
-					const upgCreep = new UpgraderCreep(_creep.id, this.room.name);
+					const upgCreep = new UpgraderCreep(_creep.id);
 					this.creepsByRole[CreepRole.Upgrader].push(upgCreep);
 					return upgCreep;
 
 				case CreepRole.Builder:
-					const bldCreep = new BuilderCreep(_creep.id, this.room.name);
+					const bldCreep = new BuilderCreep(_creep.id);
 					this.creepsByRole[CreepRole.Builder].push(bldCreep);
 					return bldCreep;
 
@@ -161,39 +161,19 @@ export class Colony implements IColony {
 		this.spawners.forEach((spawner) => {
 			// TODO: update spawning function to remove static part definitions
 			if (!spawner.spawning && spawner.room.energyAvailable === spawner.room.energyCapacityAvailable) {
-				// console.log('not spawning');
-				// TODO: define spawn need
 				if (this.creepsByRole[CreepRole.Harvester].length < 5) {
 					console.log('spawning harvester');
-					spawnHarvesterCreep(
-						spawner,
-						{
-							type: CreepRole.Harvester, // This is useles atm
-							priority: 0,
-							body: [WORK, WORK, MOVE, CARRY]
-						},
-						{ energyStructures: [spawner].concat(this.extensions as any) },
-						spawner.room.energyAvailable
-					);
+					HarvesterCreep.spawn(spawner, spawner.room.energyAvailable, this.colonyName, this.extensions);
 				} else if (this.creepsByRole[CreepRole.Upgrader].length < 1) {
 					console.log('spawning upgrader');
-					SpawnUpgraderCreep(
-						spawner,
-						{
-							type: CreepRole.Upgrader,
-							priority: 0,
-							body: [WORK, MOVE, MOVE, CARRY, CARRY]
-						},
-						{ energyStructures: [spawner].concat(this.extensions as any) }
-					);
+					UpgraderCreep.spawn(spawner, spawner.room.energyAvailable, this.colonyName, this.extensions);
 				} else if (this.creepsByRole[CreepRole.Builder].length < 3 && this.constructionSites.length) {
 					console.log('spawning builder');
-					SpawnBuilderCreep(spawner, { type: CreepRole.Builder, priority: 0, body: [WORK, WORK, MOVE, CARRY] }, { energyStructures: [spawner].concat(this.extensions as any) });
+					BuilderCreep.spawn(spawner, spawner.room.energyAvailable, this.colonyName, this.extensions);
 				}
 			}
 		});
 
-		// console.log('running creeps: ', this.creeps.length);
 		this.creeps.forEach((creep: _Creep) => {
 			creep.run();
 		});

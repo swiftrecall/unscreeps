@@ -2,6 +2,14 @@ import { CreepRole, _Creep, ITask, SetupCommonCreepCostMatrix } from './creep';
 import { ID } from '../util';
 
 export class UpgraderCreep extends _Creep {
+	static spawn(spawn: StructureSpawn, energy: number, colony: string, energyStructures: StructureExtension[]): ScreepsReturnCode {
+		const memory = {
+			colony,
+			role: CreepRole.Upgrader
+		};
+		return _Creep._spawn(spawn, energy, memory, energyStructures, [WORK, MOVE, MOVE, CARRY, CARRY], 300, 'upgrader');
+	}
+
 	public static getUpgradeTask(creep: _Creep): ITask | null {
 		if (creep.colony && creep.colony.controllers && creep.colony.controllers.length) {
 			return { action: 'transfer', target: creep.colony.controllers[0].id };
@@ -14,32 +22,24 @@ export class UpgraderCreep extends _Creep {
 		if (this.tasks.length === 0 && this.colony.sources.length > 0) {
 			const tasks: ITask[] = [];
 			// if (!this.memory.assignedSource) {
-				this.memory.assignedSource = this.colony.sources[0].id;
+			// this.memory.assignedSource = this.colony.sources[0].id;
 			// }
 
-			tasks.push({ action: 'harvest', target: this.memory.assignedSource });
+			tasks.push({ action: 'harvest', target: this.colony.sources[0].id });
 			tasks.push(UpgraderCreep.getUpgradeTask(this));
 			// tasks.push({ action: 'transfer', target: this.colony.controllers[0].id });
 
-			this.memory.routing = {
-				route: PathFinder.search(
-					this.pos,
-					{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
-					{
-						roomCallback: function (roomName) {
-							return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-						}
+			const path = PathFinder.search(
+				this.pos,
+				{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
+				{
+					roomCallback: function (roomName) {
+						return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
 					}
-				).path,
-				reached: false,
-				currentPosition: 0
-			};
+				}
+			);
 
-			try {
-				this.log(JSON.stringify(this.memory.routing.route));
-			} catch (e) {
-				this.log(e.stack);
-			}
+			this.memory.routing = path;
 
 			this.tasks = tasks;
 		}
@@ -95,13 +95,15 @@ export class UpgraderCreep extends _Creep {
 						}
 					}
 				);
-				if (pathFinderPath.incomplete) {
-					return true;
-				} else {
-					this.memory.routing.reached = false;
-					this.memory.routing.route = pathFinderPath.path;
-					return this.moveRoute();
-				}
+				this.memory.routing = pathFinderPath;
+				return true;
+			// if (pathFinderPath.incomplete) {
+			// 	return true;
+			// } else {
+			// 	this.memory.routing.reached = false;
+			// 	this.memory.routing.route = pathFinderPath.path;
+			// 	return this.moveRoute();
+			// }
 
 			case ERR_NOT_ENOUGH_RESOURCES:
 				if (action === 'transfer') {
@@ -134,18 +136,4 @@ export class UpgraderCreep extends _Creep {
 		this.log('shouldPlaceRoads');
 		return true;
 	}
-}
-
-export function SpawnUpgraderCreep(spawner: StructureSpawn, spawnRequest: ICreepSpawnRequest, spawnOpts: SpawnOptions = {}): ScreepsReturnCode {
-	let name = `upg_${ID()}`;
-	spawnOpts.memory = { ...spawnOpts.memory, role: CreepRole.Upgrader };
-	let attempt = 0;
-	let spawnReturnCode: ScreepsReturnCode;
-	while ((spawnReturnCode = spawner.spawnCreep(spawnRequest.body, name, spawnOpts)) === ERR_NAME_EXISTS) {
-		if (++attempt > 10) {
-			return ERR_NAME_EXISTS;
-		}
-		name = `upg_${ID}`;
-	}
-	return spawnReturnCode;
 }
