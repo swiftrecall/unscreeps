@@ -13,6 +13,7 @@ interface CreepMemory {
 	// TODO: remove
 	source: Id<Source>;
 	target: Id<StructureSpawn>;
+	debug?: boolean;
 }
 
 interface Creep {

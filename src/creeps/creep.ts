@@ -47,34 +47,34 @@ export interface ITask<T = any> {
 }
 
 export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
-	if (!room.commonCreepCostMatrix) {
-		if (!room.commonCreepCostMatrix) {
-			// if creating a new CostMatrix for every tick becomes expensive it could be changed to cache in memory and only create a new one
-			// if the interval has been reached --- this will conflict with adding creeps to the CostMatrix though as their
-			// positions will most likely change on every tick
-			const costs = new PathFinder.CostMatrix();
-			room.find(FIND_STRUCTURES).forEach((struct) => {
-				if (struct.structureType === STRUCTURE_ROAD) {
-					// TODO: check if decimal is allowed (it may round) and if there is a benefit to have it
-					costs.set(struct.pos.x, struct.pos.y, 0.75);
-				} else if (struct.structureType !== STRUCTURE_CONTAINER && (struct.structureType !== STRUCTURE_RAMPART || !(struct as OwnedStructure).my)) {
-					costs.set(struct.pos.x, struct.pos.y, 255);
-				}
-			});
+	if (room && !room.commonCreepCostMatrix) {
+		// if (!room.commonCreepCostMatrix) {
+		// if creating a new CostMatrix for every tick becomes expensive it could be changed to cache in memory and only create a new one
+		// if the interval has been reached --- this will conflict with adding creeps to the CostMatrix though as their
+		// positions will most likely change on every tick
+		const costs = new PathFinder.CostMatrix();
+		room.find(FIND_STRUCTURES).forEach((struct) => {
+			if (struct.structureType === STRUCTURE_ROAD) {
+				// TODO: check if decimal is allowed (it may round) and if there is a benefit to have it
+				costs.set(struct.pos.x, struct.pos.y, 0.75);
+			} else if (struct.structureType !== STRUCTURE_CONTAINER && (struct.structureType !== STRUCTURE_RAMPART || !(struct as OwnedStructure).my)) {
+				costs.set(struct.pos.x, struct.pos.y, 255);
+			}
+		});
 
-			// The documentation says to "avoid using large values in your CostMatrix and terrain cost flags" b/c it will run slower
-			// Should this taken into account how many creeps are in the room
-			room.find(FIND_CREEPS).forEach((creep) => {
-				costs.set(creep.pos.x, creep.pos.y, 255);
-				if (!creep.my) {
-					// create an area around the creep to try and avoid???
-					// could make this dependent on if the player has a history of being hostile
-				}
-			});
-			room.commonCreepCostMatrix = costs;
-		}
+		// The documentation says to "avoid using large values in your CostMatrix and terrain cost flags" b/c it will run slower
+		// Should this taken into account how many creeps are in the room
+		room.find(FIND_CREEPS).forEach((creep) => {
+			costs.set(creep.pos.x, creep.pos.y, 255);
+			if (!creep.my) {
+				// create an area around the creep to try and avoid???
+				// could make this dependent on if the player has a history of being hostile
+			}
+		});
+		room.commonCreepCostMatrix = costs;
+		// }
+		return room.commonCreepCostMatrix;
 	}
-	return room.commonCreepCostMatrix;
 }
 
 function getDirection(current: RoomPosition, next: RoomPosition): DirectionConstant {
@@ -114,7 +114,7 @@ function getDirection(current: RoomPosition, next: RoomPosition): DirectionConst
 }
 
 export function areRoomPositionsEqual(pos1: RoomPosition, pos2: RoomPosition): boolean {
-	console.log('comparing:', JSON.stringify(pos1), JSON.stringify(pos2));
+	// console.log('comparing:', JSON.stringify(pos1), JSON.stringify(pos2));
 	return pos1.roomName === pos2.roomName && pos1.x === pos2.x && pos1.y === pos2.y;
 }
 
@@ -151,7 +151,7 @@ export abstract class _Creep extends Creep {
 	constructor(id: Id<Creep>, colonyName: string) {
 		super(id);
 		this.memory.colony = colonyName;
-		console.log('setting colony:', this.memory.colony);
+		// console.log('setting colony:', this.memory.colony);
 	}
 
 	/**
@@ -194,10 +194,49 @@ export abstract class _Creep extends Creep {
 
 		if (!this.memory.routing.route || this.memory.routing.route.length === 0) {
 			this.memory.routing.reached = true;
+			// attempts to build road on current position if creep allows it
+			this.createRoadOnRoute();
+			return true;
 		}
 
-    // attempts to build road on current position if creep type allows it
-    this.createRoadOnRoute();
+		if (this.memory.routing.currentPosition == null || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
+			this.memory.routing.currentPosition = 0;
+		}
+
+		// while (!this.memory.routing.reached && this.fatigue <= 0) {
+		// 	// attempts to build road on current position if creep allows it
+		// 	this.createRoadOnRoute();
+
+		// 	if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
+		// 		this.log("current position doesn't match");
+		// 		this.log(JSON.stringify(this.memory.routing.route));
+		// 		this.log(JSON.stringify(this.pos));
+		// 		this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
+		// 	}
+
+		// 	let { route, currentPosition } = this.memory.routing;
+
+		// 	if (currentPosition + 1 < route.length) {
+		// 		this.log('initiating move');
+		// 		const direction = getDirection(this.pos, route[currentPosition + 1]);
+		// 		this.log('moving direction: ' + direction);
+		// 		const moveResult = this.move(direction);
+
+		// 		if (moveResult === OK) {
+		// 			this.memory.routing.currentPosition = this.memory.routing.currentPosition + 1;
+		// 			if (this.memory.routing.currentPosition === route.length - 1) {
+		// 				this.memory.routing.reached = true;
+		// 			}
+		// 		} else {
+		// 			this.log(`Could not completed move: ${moveResult}`);
+		// 		}
+		// 	} else {
+		// 		this.log('setting reached to true');
+		// 		this.memory.routing.reached = true;
+		// 	}
+		// }
+
+		// return this.memory.routing.reached;
 
 		if (this.memory.routing.reached === true) {
 			this.log('reached');
@@ -208,9 +247,16 @@ export abstract class _Creep extends Creep {
 			this.memory.routing.currentPosition = 0;
 		}
 
+		if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
+			this.log("current position doesn't match");
+			this.log(JSON.stringify(this.memory.routing.route));
+			this.log(JSON.stringify(this.pos));
+			this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
+		}
+
 		const { route, currentPosition } = this.memory.routing;
 
-		this.log(`curr: ${JSON.stringify(this.pos)} | routePos: ${route[currentPosition]}`);
+		this.log(`curr: ${JSON.stringify(this.pos)} | routePos: ${JSON.stringify(route[currentPosition + 1])}`);
 
 		if (currentPosition + 1 < route.length) {
 			this.log('initiating move');
@@ -235,20 +281,11 @@ export abstract class _Creep extends Creep {
 		return true;
 	}
 
-	// protected moveOnRoute({route, currentPosition}: {route: RoomPosition[], currentPosition: number}): boolean {
-	//   if (currentPosition + 1 < route.length) {
-	//     const direction = getDirection(this.pos, route[currentPosition + 1]);
-	//     const moveResult = this.move(direction);
-
-	//     if (moveResult === OK) {
-	//       this.memory
-	//     }
-	//   }
-	// }
-
 	public log(message: string): void {
 		// TODO: add debug configuration
-		log(`${this.type} ${this.name} ${message}`, 'Creep');
+		if (this.memory.debug) {
+			log(`${this.type} ${this.name} ${message}`, 'Creep');
+		}
 	}
 
 	public run(): boolean {
@@ -271,15 +308,19 @@ export abstract class _Creep extends Creep {
 		}
 	}
 
-  abstract shouldPlaceRoads(): boolean;
+	abstract shouldPlaceRoads(): boolean;
 
-  private createRoadOnRoute(): void {
-    // check if creep should place route
-    if (this.shouldPlaceRoads()) {
-      const roadLike = this.room.lookAt(this.pos).filter((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));
-      if (roadLike.length === 0) {
-        this.room.createConstructionSite(this.pos, STRUCTURE_ROAD);
-      }
-    }
-  }
+	private createRoadOnRoute(): void {
+		// check if creep should place route
+		if (this.shouldPlaceRoads()) {
+			this.log('placing road');
+			this.log(JSON.stringify(this.room.lookAt(this.pos)));
+			const roadLike = this.room
+				.lookAt(this.pos)
+				.filter((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));
+			if (roadLike.length === 0) {
+				this.room.createConstructionSite(this.pos, STRUCTURE_ROAD);
+			}
+		}
+	}
 }

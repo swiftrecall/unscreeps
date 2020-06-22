@@ -56,9 +56,13 @@ export function loop() {
 
 	Object.keys(Memory.colonies).forEach((colonyName) => {
 		// console.log('setting colony:', colonyName);
-		global_.colonies[colonyName] = new Colony(colonyName);
-		if (global_.colonies[colonyName].checkRun()) {
-			global_.colonies[colonyName].run();
+		if (!Game.rooms[colonyName]) {
+			delete Memory.colonies[colonyName];
+		} else {
+			global_.colonies[colonyName] = new Colony(colonyName);
+			if (global_.colonies[colonyName].checkRun()) {
+				global_.colonies[colonyName].run();
+			}
 		}
 	});
 

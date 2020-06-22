@@ -10,19 +10,19 @@ export class HarvesterCreep extends _Creep {
 		if (!this.tasks) {
 			this.tasks = [];
 		}
-		if (this.tasks.length === 0) {
+		if (this.tasks.length === 0 && this.colony.sources.length > 0) {
 			// this.log('setting tasks');
 			// create tasks for creep
 			// find sources that can be harvested
-			if (!this.memory.assignedSource) {
-				if (this.colony.sources.length) {
-					this.memory.assignedSource = this.colony.sources[0].id;
-				}
-			}
+			// if (!this.memory.assignedSource) {
+			// 	if (this.colony.sources.length) {
+			// 		this.memory.assignedSource = this.colony.sources[0].id;
+			// 	}
+			// }
 
 			this.tasks.push({
 				action: 'harvest',
-				target: this.memory.assignedSource
+				target: this.colony.sources[0].id
 			});
 
 			this.tasks.push({
@@ -150,10 +150,48 @@ export class HarvesterCreep extends _Creep {
 				return true;
 
 			case ERR_FULL:
-				this.log('Waiting until target needs resources');
+				if (this.colony.extensions.length) {
+
+					const next = this.pos.findClosestByPath(this.colony.extensions, { filter: (extension: StructureExtension) => extension.energy < extension.energyCapacity})
+
+					if (next != null) {
+						this.currentTask.target = next.id;
+
+						const pathFinderPath = PathFinder.search(
+							this.pos,
+							{ pos: target.pos, range: 1 },
+							{
+								roomCallback: function (roomName) {
+									return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
+								}
+							}
+						);
+		
+						// This can result in creeps getting stuck around the lowest filled item 
+						// if (pathFinderPath.incomplete) {
+						// 	// creep should wait here until a spot opens up
+						// 	// TODO: need to evaluate if the creep is actually close to where it needs to go or not
+						// 	return true;
+						// } else {
+							this.memory.routing.reached = false;
+							this.memory.routing.route = pathFinderPath.path;
+						// }
+					}
+				}
 				return true;
 
-			case ERR_NOT_FOUND || ERR_INVALID_TARGET:
+			case ERR_INVALID_TARGET:
+				// TODO: handle what to do with remaining resource
+				// - should certain task been chainable/tied together
+				// - clean up action at the end of the task queue?
+				this.log(`${actionReturnCode} for ${task.action}. Removing task.`);
+
+				this.setNextTask();
+				// this.tasks.shift();
+				// could tell the creep to do its next task but harvesters aren't that important so it can wait until next tick
+				return true;
+
+			case ERR_INVALID_TARGET:
 				// TODO: handle what to do with remaining resource
 				// - should certain task been chainable/tied together
 				// - clean up action at the end of the task queue?
@@ -168,93 +206,31 @@ export class HarvesterCreep extends _Creep {
 				throw new Error(`Unhandled harvester ${task.action} result: ${actionReturnCode}`);
 		}
 	}
-  
-  shouldPlaceRoads(): boolean {
-    return true;
-  }
 
-	private buildRoad(action: CreepTaskAction, target?: Id<ConstructionSite>): boolean {
-		/**
-		 * TODO: figure out best way to maintain route
-		 * TODO: finish build execution
-		 * TODO: add flag so roading building doesn't have to be computed once it is completed
-		 */
-
-		if (this.store[RESOURCE_ENERGY] === 0) {
-			this.setNextTask();
-			return true;
-		}
-
-		if (!this.memory.routing || !this.memory.routing.route || this.memory.routing.route.length === 0 || this.store[RESOURCE_ENERGY] === 0) {
-			this.setNextTask();
-			return true;
-		}
-
-		if (this.memory.routing.currentPosition == null) {
-			this.memory.routing.currentPosition = 0;
-		}
-
-		if (this.memory.routing.reached === true) {
-		}
-
-		// find build target along its route
-		// check if it has build target along its route
-		if (!target) {
-			// look ahead of current position?
-			// let constructionTarget;
-			for (let i = this.memory.routing.currentPosition; i < this.memory.routing.route.length; i++) {
-				let posObjects = this.room.lookAt(this.memory.routing.route[i]);
-				if (posObjects && posObjects.length > 0) {
-					const roadConstructionSiteLookResult = posObjects.find((value) => {
-						return value.constructionSite && value.constructionSite.structureType === STRUCTURE_ROAD;
-					});
-					if (roadConstructionSiteLookResult) {
-						target = roadConstructionSiteLookResult.constructionSite.id;
-						this.memory.routing.targetIndex = i;
-						break;
-					}
-				}
-			}
-
-			if (!target) {
-				// if nothing ahead, reverse route
-				this.memory.routing.route = this.memory.routing.route.reverse();
-				this.memory.routing.currentPosition = this.memory.routing.route.length - 1 - this.memory.routing.currentPosition;
-
-				for (let i = this.memory.routing.currentPosition; i < this.memory.routing.route.length; i++) {
-					let posObjects = this.room.lookAt(this.memory.routing.route[i]);
-					if (posObjects && posObjects.length > 0) {
-						const roadConstructionSiteLookResult = posObjects.find((value) => value.constructionSite && value.constructionSite.structureType === STRUCTURE_ROAD);
-						if (roadConstructionSiteLookResult) {
-							target = roadConstructionSiteLookResult.constructionSite.id;
-							this.memory.routing.targetIndex = i;
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		// if nothing found; remove task
-		if (!target) {
-			// TODO: set flag so road build task is no longer set
-			this.setNextTask();
-			return true;
-		} else {
-			// check distance from build target
-			// move if not in range
-			// execute build
-		}
+	shouldPlaceRoads(): boolean {
+		return true;
 	}
 }
 
-export function spawnHarvesterCreep(spawner: StructureSpawn, spawnRequest: ICreepSpawnRequest, spawnOpts: SpawnOptions = {}): ScreepsReturnCode {
+export function spawnHarvesterCreep(spawner: StructureSpawn, spawnRequest: ICreepSpawnRequest, spawnOpts: SpawnOptions = {}, energy: number): ScreepsReturnCode {
 	let name = `harv_${ID()}`;
 	spawnOpts.memory = { ...spawnOpts.memory, role: CreepRole.Harvester };
 	spawnOpts.dryRun = true;
+
+	const bodyParts = [];
+	const numberOfBodyParts = Math.floor(energy / 200);
+
+	for (let i = 0; i < numberOfBodyParts; i++) {
+		bodyParts.push(WORK);
+		bodyParts.push(MOVE);
+		bodyParts.push(CARRY);
+		// bodyParts.concat(WORK, MOVE, CARRY);
+	}
+
+
 	let attempt = 0;
 	let spawnReturnCode: ScreepsReturnCode;
-	while ((spawnReturnCode = spawner.spawnCreep(spawnRequest.body, name, spawnOpts)) === ERR_NAME_EXISTS) {
+	while ((spawnReturnCode = spawner.spawnCreep(bodyParts, name, spawnOpts)) === ERR_NAME_EXISTS) {
 		if (++attempt > 10) {
 			return ERR_NAME_EXISTS;
 		}
@@ -263,7 +239,7 @@ export function spawnHarvesterCreep(spawner: StructureSpawn, spawnRequest: ICree
 	if (spawnReturnCode === OK) {
 		console.log('dry run passed, executing');
 		spawnOpts.dryRun = false;
-		spawnReturnCode = spawner.spawnCreep(spawnRequest.body, name, spawnOpts);
+		spawnReturnCode = spawner.spawnCreep(bodyParts, name, spawnOpts);
 	}
 	console.log('spawnReturnCode:', spawnReturnCode);
 	return spawnReturnCode;

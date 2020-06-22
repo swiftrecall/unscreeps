@@ -1,10 +1,9 @@
-import { SpawnRequestQueue } from './spawner';
 import { HarvesterCreep, spawnHarvesterCreep } from './creeps/harvester';
 import { CreepRole, _Creep } from './creeps/creep';
 import { SpawnUpgraderCreep, UpgraderCreep } from './creeps/upgrader';
-import { ConstructionDirective } from './creeps/builder';
 import { _Source } from './source';
 import _ from 'lodash';
+import { BuilderCreep, SpawnBuilderCreep } from './creeps/builder';
 
 export interface ColonyMemory extends IColonyMemory {
 	outposts: string[];
@@ -56,7 +55,6 @@ export class Colony implements IColony {
 	controllers: StructureController[] = [];
 	extensions: StructureExtension[] = [];
 	sources: _Source[] = [];
-	// harvestableSources: _Source[] = [];
 	droppedResources: Resource[] = [];
 	constructionSites: ConstructionSite[] = [];
 
@@ -90,10 +88,6 @@ export class Colony implements IColony {
 	}
 
 	private init(): void {
-		// outposts
-		// this.outposts = this.memory.outposts.map((outpost) => Game.rooms[outpost]);
-
-		// spawners
 		this.room.find(FIND_MY_STRUCTURES).forEach((structure) => {
 			switch (structure.structureType) {
 				case STRUCTURE_SPAWN:
@@ -113,14 +107,20 @@ export class Colony implements IColony {
 			}
 		});
 
-		// this.room.find(FIND_MY_CONSTRUCTION_SITES).forEach((constructionSite) => {
-		//   if (this.memory.constructionSites)
-		// })
+		this.constructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
 
-		this.room.find(FIND_SOURCES).map((value) => {
+		this.room.find(FIND_SOURCES_ACTIVE).map((value) => {
 			const _source = new _Source(value);
-			// this.harvestableSources.push(_source);
-			this.sources.push(_source);
+			let insertIndex = 0;
+			for (; insertIndex < this.sources.length; insertIndex++) {
+				// TODO: need to see if spots around it are blocked as well; taking distance into account?
+				if (this.sources[insertIndex].energy <= _source.energy) {
+					break;
+				} else if ((insertIndex = this.sources.length - 1)) {
+					insertIndex++;
+				}
+			}
+			this.sources.splice(insertIndex, 0, _source);
 		});
 		// console.log('sources:', this.sources.length);
 		// console.log('harvestable sources:', this.harvestableSources.length);
@@ -138,6 +138,11 @@ export class Colony implements IColony {
 					this.creepsByRole[CreepRole.Upgrader].push(upgCreep);
 					return upgCreep;
 
+				case CreepRole.Builder:
+					const bldCreep = new BuilderCreep(_creep.id, this.room.name);
+					this.creepsByRole[CreepRole.Builder].push(bldCreep);
+					return bldCreep;
+
 				default:
 					break;
 			}
@@ -154,19 +159,21 @@ export class Colony implements IColony {
 
 		// console.log('running spawners: ', this.spawners.length);
 		this.spawners.forEach((spawner) => {
-			if (!spawner.spawning) {
+			// TODO: update spawning function to remove static part definitions
+			if (!spawner.spawning && spawner.room.energyAvailable === spawner.room.energyCapacityAvailable) {
 				// console.log('not spawning');
 				// TODO: define spawn need
-				if (this.creepsByRole[CreepRole.Harvester].length < 2) {
+				if (this.creepsByRole[CreepRole.Harvester].length < 5) {
 					console.log('spawning harvester');
 					spawnHarvesterCreep(
 						spawner,
 						{
-							type: CreepRole.Harvester, // This is useless atm
+							type: CreepRole.Harvester, // This is useles atm
 							priority: 0,
-							body: [WORK, MOVE, CARRY, CARRY]
+							body: [WORK, WORK, MOVE, CARRY]
 						},
-						{ energyStructures: [spawner].concat(this.extensions as any) }
+						{ energyStructures: [spawner].concat(this.extensions as any) },
+						spawner.room.energyAvailable
 					);
 				} else if (this.creepsByRole[CreepRole.Upgrader].length < 1) {
 					console.log('spawning upgrader');
@@ -175,10 +182,13 @@ export class Colony implements IColony {
 						{
 							type: CreepRole.Upgrader,
 							priority: 0,
-							body: [WORK, MOVE, CARRY, CARRY]
+							body: [WORK, MOVE, MOVE, CARRY, CARRY]
 						},
 						{ energyStructures: [spawner].concat(this.extensions as any) }
 					);
+				} else if (this.creepsByRole[CreepRole.Builder].length < 3 && this.constructionSites.length) {
+					console.log('spawning builder');
+					SpawnBuilderCreep(spawner, { type: CreepRole.Builder, priority: 0, body: [WORK, WORK, MOVE, CARRY] }, { energyStructures: [spawner].concat(this.extensions as any) });
 				}
 			}
 		});

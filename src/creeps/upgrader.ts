@@ -1,16 +1,25 @@
-import { CreepState, CreepRole, _Creep, ITask, SetupCommonCreepCostMatrix } from './creep';
+import { CreepRole, _Creep, ITask, SetupCommonCreepCostMatrix } from './creep';
 import { ID } from '../util';
 
 export class UpgraderCreep extends _Creep {
+	public static getUpgradeTask(creep: _Creep): ITask | null {
+		if (creep.colony && creep.colony.controllers && creep.colony.controllers.length) {
+			return { action: 'transfer', target: creep.colony.controllers[0].id };
+		}
+
+		return null;
+	}
+
 	setup(): void {
-		if (this.tasks.length === 0) {
+		if (this.tasks.length === 0 && this.colony.sources.length > 0) {
 			const tasks: ITask[] = [];
-			if (!this.memory.assignedSource) {
+			// if (!this.memory.assignedSource) {
 				this.memory.assignedSource = this.colony.sources[0].id;
-			}
+			// }
 
 			tasks.push({ action: 'harvest', target: this.memory.assignedSource });
-			tasks.push({ action: 'transfer', target: this.colony.controllers[0].id });
+			tasks.push(UpgraderCreep.getUpgradeTask(this));
+			// tasks.push({ action: 'transfer', target: this.colony.controllers[0].id });
 
 			this.memory.routing = {
 				route: PathFinder.search(
@@ -61,7 +70,7 @@ export class UpgraderCreep extends _Creep {
 			actionReturnCode = this.withdraw(targetObject, RESOURCE_ENERGY);
 		}
 
-		this.log(`${action} - ReturnCode: ${actionReturnCode}`);
+		this.log(`${action} - ${actionReturnCode}`);
 		switch (actionReturnCode) {
 			case OK:
 				if (action === 'transfer' && this.store[RESOURCE_ENERGY] === 0) {
@@ -119,11 +128,12 @@ export class UpgraderCreep extends _Creep {
 			default:
 				throw new Error(`Unhandled ${action} result: ${actionReturnCode}`);
 		}
-  }
-  
-  shouldPlaceRoads(): boolean {
-    return true;
-  }
+	}
+
+	shouldPlaceRoads(): boolean {
+		this.log('shouldPlaceRoads');
+		return true;
+	}
 }
 
 export function SpawnUpgraderCreep(spawner: StructureSpawn, spawnRequest: ICreepSpawnRequest, spawnOpts: SpawnOptions = {}): ScreepsReturnCode {
