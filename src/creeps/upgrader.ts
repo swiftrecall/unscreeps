@@ -28,18 +28,10 @@ export class UpgraderCreep extends _Creep {
 			tasks.push({ action: 'harvest', target: this.colony.sources[0].id });
 			tasks.push(UpgraderCreep.getUpgradeTask(this));
 			// tasks.push({ action: 'transfer', target: this.colony.controllers[0].id });
-
-			const path = PathFinder.search(
-				this.pos,
-				{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
-				{
-					roomCallback: function (roomName) {
-						return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-					}
-				}
-			);
-
-			this.memory.routing = path;
+			this.memory.routing = {
+				reached: false,
+				target: Game.getObjectById(tasks[0].target).pos
+			};
 
 			this.tasks = tasks;
 		}
@@ -86,16 +78,10 @@ export class UpgraderCreep extends _Creep {
 				return true;
 
 			case ERR_NOT_IN_RANGE:
-				const pathFinderPath = PathFinder.search(
-					this.pos,
-					{ pos: targetObject.pos, range: 1 },
-					{
-						roomCallback: function (roomName) {
-							return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-						}
-					}
-				);
-				this.memory.routing = pathFinderPath;
+				this.memory.routing = {
+					reached: false,
+					target: targetObject.pos
+				};
 				return true;
 			// if (pathFinderPath.incomplete) {
 			// 	return true;

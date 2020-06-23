@@ -161,7 +161,7 @@ export class Colony implements IColony {
 		this.spawners.forEach((spawner) => {
 			// TODO: update spawning function to remove static part definitions
 			if (!spawner.spawning && spawner.room.energyAvailable === spawner.room.energyCapacityAvailable) {
-				if (this.creepsByRole[CreepRole.Harvester].length < 5) {
+				if (this.creepsByRole[CreepRole.Harvester].length < 3) {
 					console.log('spawning harvester');
 					HarvesterCreep.spawn(spawner, spawner.room.energyAvailable, this.colonyName, this.extensions);
 				} else if (this.creepsByRole[CreepRole.Upgrader].length < 1) {

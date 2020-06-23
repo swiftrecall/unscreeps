@@ -24,15 +24,7 @@ export class BuilderCreep extends _Creep {
 			}
 			tasks.push(UpgraderCreep.getUpgradeTask(this));
 
-			this.memory.routing = PathFinder.search(
-				this.pos,
-				{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
-				{
-					roomCallback: function (roomName) {
-						return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-					}
-				}
-			);
+			this.memory.routing.target = Game.getObjectById(tasks[0].target).pos;
 			// this.memory.routing = {
 			// 	route: PathFinder.search(
 			// 		this.pos,
@@ -48,6 +40,13 @@ export class BuilderCreep extends _Creep {
 			// };
 
 			this.tasks = tasks;
+		}
+
+		if (!this.memory.routing.target && this.tasks.length) {
+			this.memory.routing = {
+				reached: false,
+				target: Game.getObjectById(this.tasks[0].target).pos
+			};
 		}
 	}
 
@@ -101,16 +100,10 @@ export class BuilderCreep extends _Creep {
 				return true;
 
 			case ERR_NOT_IN_RANGE:
-				const pathFinderPath = PathFinder.search(
-					this.pos,
-					{ pos: targetObject.pos, range: 1 },
-					{
-						roomCallback: function (roomName) {
-							return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-						}
-					}
-				);
-				this.memory.routing = pathFinderPath;
+				this.memory.routing = {
+					reached: false,
+					target: targetObject.pos
+				};
 				return true;
 			// if (pathFinderPath.incomplete) {
 			// 	return true;

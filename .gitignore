@@ -1,7 +1,3 @@
-<<<<<<< HEAD
 node_modules/**
 dist/**
-=======
-node_modules/
-dist/
->>>>>>> 4a7dcd69e1236fa04fd3c3afb0f5b074dbf1f2a9
+docs/**

@@ -1,7 +1,7 @@
 interface CreepMemory {
 	// should be determinable by the class instance
 	role: any;
-	routing?: PathFinderPath;
+	routing?: Routing;
 	tasks?: any;
 	colony: string;
 	debug?: boolean;
@@ -14,6 +14,7 @@ interface Creep {
 interface Routing {
 	reached?: boolean;
 	route?: RoomPosition[];
+	target?: RoomPosition;
 	currentPosition?: number;
 	targetIndex?: number;
 }

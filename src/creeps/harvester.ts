@@ -23,31 +23,11 @@ export class HarvesterCreep extends _Creep {
 				action: 'transfer',
 				target: this.colony.spawners[0].id
 			});
-		}
 
-		if (this.currentTask && this.currentTask.target && !this.memory.routing) {
-			this.memory.routing = PathFinder.search(
-				this.pos,
-				{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
-				{
-					roomCallback: function (roomName) {
-						return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-					}
-				}
-			);
-			// this.memory.routing = {
-			// 	route: PathFinder.search(
-			// 		this.pos,
-			// 		{ pos: Game.getObjectById(this.tasks[0].target).pos, range: 1 },
-			// 		{
-			// 			roomCallback: function (roomName) {
-			// 				return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-			// 			}
-			// 		}
-			// 	).path,
-			// 	reached: false,
-			// 	currentPosition: 0
-			// };
+			this.memory.routing = {
+				reached: false,
+				target: Game.getObjectById(this.tasks[0].target).pos
+			};
 		}
 	}
 
@@ -127,7 +107,8 @@ export class HarvesterCreep extends _Creep {
 					}
 				);
 
-				this.memory.routing = pathFinderPath;
+				this.memory.routing.reached = false;
+				this.memory.routing.target = target.pos;
 				return true;
 
 			// if (pathFinderPath.incomplete) {
@@ -162,16 +143,8 @@ export class HarvesterCreep extends _Creep {
 					if (next != null) {
 						this.currentTask.target = next.id;
 
-						const pathFinderPath = PathFinder.search(
-							this.pos,
-							{ pos: target.pos, range: 1 },
-							{
-								roomCallback: function (roomName) {
-									return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-								}
-							}
-						);
-						this.memory.routing = pathFinderPath;
+						this.memory.routing.reached = false;
+						this.memory.routing.target = Game.getObjectById(next.id).pos;
 
 						// This can result in creeps getting stuck around the lowest filled item
 						// if (pathFinderPath.incomplete) {

@@ -46,7 +46,10 @@ export interface ITask<T = any> {
 	removeRoute?: boolean;
 }
 
-export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
+export function SetupCommonCreepCostMatrix(room: Room | string): CostMatrix | undefined {
+	if (typeof room === 'string') {
+		room = Game.rooms[room];
+	}
 	if (room && !room.commonCreepCostMatrix) {
 		// if (!room.commonCreepCostMatrix) {
 		// if creating a new CostMatrix for every tick becomes expensive it could be changed to cache in memory and only create a new one
@@ -75,6 +78,15 @@ export function SetupCommonCreepCostMatrix(room: Room): CostMatrix | undefined {
 		// }
 		return room.commonCreepCostMatrix;
 	}
+}
+
+export function areRoomPositionsAdjacent(pos1: RoomPosition, pos2: RoomPosition): boolean {
+	if (!pos1 || !pos2 || pos1.roomName !== pos2.roomName) {
+		return false;
+	}
+	const xD = Math.abs(pos1.x - pos2.x);
+	const yD = Math.abs(pos1.y - pos2.y);
+	return xD <= 1 && yD <= 1;
 }
 
 function getDirection(current: RoomPosition, next: RoomPosition): DirectionConstant {
@@ -173,10 +185,12 @@ export abstract class _Creep extends Creep {
 	protected setNextTask() {
 		const completedTask = this.tasks.shift();
 		this.log(`completed: ${completedTask}`);
-		// this.currentTask += 1;
-		// if (this.currentTask >= this.tasks.length) {
-		//   this.currentTask = 0;
-		// }
+		if (this.currentTask && this.currentTask.target) {
+			this.memory.routing = {
+				reached: false,
+				target: Game.getObjectById(this.currentTask.target).pos
+			};
+		}
 	}
 
 	constructor(id: Id<Creep>) {
@@ -211,82 +225,42 @@ export abstract class _Creep extends Creep {
 	 * @param task {@link ITask} Task to execute once route is complete
 	 */
 	public moveRoute(): boolean {
+		this.createRoadOnRoute();
+
 		if (!this.memory.routing) {
 			this.log('no routing');
 			return false;
 		}
 
-		this.createRoadOnRoute();
+		if (this.memory.routing.reached === true) {
+			this.log('routing completed');
+			return true;
+		}
 
-		const moveResult = this.moveByPath(this.memory.routing.path);
-		this.log(`prior position: ${JSON.stringify(this.memory.routing.path[0])} | new position: ${JSON.stringify(this.pos)}`);
-		if (moveResult === ERR_NOT_FOUND) {
-			this.log('updating routing');
-			this.memory.routing = PathFinder.search(this.pos, { pos: this.memory.routing.path[this.memory.routing.path.length - 1], range: 1 });
-			this.log(JSON.stringify(this.memory.routing));
+		if (!this.memory.routing.target) {
+			if (this.currentTask && this.currentTask.target) {
+				this.memory.routing = {
+					reached: false,
+					target: Game.getObjectById(this.currentTask.target).pos
+				};
+			} else {
+				this.log('no routing target');
+				return true;
+			}
+		}
+
+		if (areRoomPositionsAdjacent(this.pos, this.memory.routing.target)) {
+			this.memory.routing.reached = true;
+			return true;
+		}
+
+		// TODO: possibly update path finding to not default to adjacent to destination
+		const route = PathFinder.search(this.pos, { pos: this.memory.routing.target, range: 1 }, { roomCallback: SetupCommonCreepCostMatrix }).path;
+		const moveResult = this.moveByPath(route);
+		if (areRoomPositionsAdjacent(this.pos, this.memory.routing.target)) {
+			this.memory.routing.reached = true;
 		}
 		this.log(`moveResult: ${moveResult}`);
-
-		// if (!this.memory.routing.route || this.memory.routing.route.length === 0) {
-		// 	this.memory.routing.reached = true;
-		// 	// attempts to build road on current position if creep allows it
-		// 	this.createRoadOnRoute();
-		// 	return true;
-		// }
-
-		// if (this.memory.routing.currentPosition == null || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
-		// 	this.memory.routing.currentPosition = 0;
-		// }
-
-		// if (this.memory.routing.reached === true) {
-		// 	this.log('reached');
-		// 	return true;
-		// }
-		// this.createRoadOnRoute();
-
-		// if (!this.memory.routing.currentPosition || this.memory.routing.currentPosition >= (this.memory.routing.route || []).length) {
-		// 	this.memory.routing.currentPosition = 0;
-		// }
-
-		// if (!areRoomPositionsEqual(this.memory.routing.route[this.memory.routing.currentPosition], this.pos)) {
-		// 	this.log("current position doesn't match");
-		// 	this.log(JSON.stringify(this.memory.routing.route));
-		// 	this.log(JSON.stringify(this.pos));
-		// 	this.memory.routing.route.splice(this.memory.routing.currentPosition, 0, this.pos);
-		// }
-
-		// const { route, currentPosition } = this.memory.routing;
-
-		// this.log(`curr: ${JSON.stringify(this.pos)} | routePos: ${JSON.stringify(route[currentPosition + 1])}`);
-
-		// if (currentPosition + 1 < route.length) {
-		// 	this.log('initiating move');
-		// 	const direction = getDirection(this.pos, route[currentPosition + 1]);
-		// 	this.log('moving direction: ' + direction);
-		// 	const moveResult = this.move(direction);
-
-		// 	if (moveResult === OK) {
-		// 		this.memory.routing.currentPosition = this.memory.routing.currentPosition + 1;
-		// 		if (this.memory.routing.currentPosition === route.length - 1) {
-		// 			this.memory.routing.reached = true;
-		// 		}
-		// 	} else if ((moveResult as any) === ERR_INVALID_ARGS) {
-		// 		this.log(`Could not complete move because of invalid args\n\t${JSON.stringify(this.pos)}\n\t${JSON.stringify(route[currentPosition + 1])}\n\t${direction}`);
-		// 		// TODO: remove this once the routing bug is fixed
-		// 		if (route.length > 300) {
-		// 			this.log('suiciding because of extensive route');
-		// 			this.suicide();
-		// 		}
-		// 	} else {
-		// 		this.log(`Could not completed move: ${moveResult}`);
-		// 		return false;
-		// 	}
-		// } else {
-		// 	this.log('setting reached to true');
-		// 	this.memory.routing.reached = true;
-		// }
-
-		// return true;
 	}
 
 	public log(message: string): void {
@@ -294,6 +268,19 @@ export abstract class _Creep extends Creep {
 		if (this.memory.debug) {
 			log(`${this.type} ${this.name} ${message}`, 'Creep');
 		}
+	}
+
+	private shouldExecute(): boolean {
+		// TODO: backward compat for routing changes; remove after fixing
+		if (this.memory.routing && !this.memory.routing.reached && this.memory.routing.target && areRoomPositionsAdjacent(this.pos, this.memory.routing.target)) {
+			this.memory.routing.reached = true;
+		} else if (!this.memory.routing) {
+			this.log('no routing');
+		} else if (!this.memory.routing.target) {
+			this.log('no target');
+		}
+
+		return this.memory.routing.reached;
 	}
 
 	public run(): boolean {
@@ -304,7 +291,7 @@ export abstract class _Creep extends Creep {
 		try {
 			this.setup();
 
-			if (this.memory.routing && this.memory.routing.path && this.memory.routing.path.length === 0) {
+			if (this.shouldExecute()) {
 				this.execute();
 			}
 
