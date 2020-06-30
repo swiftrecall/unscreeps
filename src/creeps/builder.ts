@@ -1,5 +1,4 @@
-import { ID } from '../util';
-import { CreepRole, _Creep, ITask, SetupCommonCreepCostMatrix } from './creep';
+import { CreepRole, _Creep, ITask, actionRequiresEnergy } from './creep';
 import { UpgraderCreep } from './upgrader';
 
 export class BuilderCreep extends _Creep {
@@ -11,35 +10,48 @@ export class BuilderCreep extends _Creep {
 		return _Creep._spawn(spawn, energy, memory, energyStructures, [WORK, WORK, MOVE, CARRY], 300, 'builder');
 	}
 
+	private currentConstructionSite: ConstructionSite | null = null;
+
 	setup(): void {
-		if (this.currentTask && this.currentTask.action === 'upgrade' && this.store[RESOURCE_ENERGY] === 0) {
-			this.setNextTask();
-		}
-		if (this.tasks.length === 0 && this.colony.sources.length) {
-			const tasks: ITask[] = [];
+		if (this.currentTask) {
+			if (this.store[RESOURCE_ENERGY] === 0) {
+				while (this.currentTask && actionRequiresEnergy(this.currentTask.action)) {
+					this.setNextTask();
+				}
+			} else if (this.currentTask.action === 'build') {
+				this.currentConstructionSite = (this.currentTask.target && Game.getObjectById(this.currentTask.target)) || null;
 
-			tasks.push({ action: 'harvest', target: this.colony.sources[0].id });
-			if (this.colony.constructionSites.length) {
-				tasks.push({ action: 'build' });
+				if (!(this.currentConstructionSite && this.currentConstructionSite instanceof ConstructionSite)) {
+					if (this.colony.constructionSites.length) {
+						this.currentConstructionSite = this.colony.constructionSites[0];
+						this.currentTask.target = this.currentConstructionSite.id;
+
+						this.memory.routing = {
+							target: this.currentConstructionSite.pos,
+							reached: false
+						};
+					} else {
+						this.setNextTask();
+					}
+				}
 			}
-			tasks.push(UpgraderCreep.getUpgradeTask(this));
+		}
 
-			this.memory.routing.target = Game.getObjectById(tasks[0].target).pos;
-			// this.memory.routing = {
-			// 	route: PathFinder.search(
-			// 		this.pos,
-			// 		{ pos: Game.getObjectById(tasks[0].target).pos, range: 1 },
-			// 		{
-			// 			roomCallback: function (roomName) {
-			// 				return SetupCommonCreepCostMatrix(Game.rooms[roomName]);
-			// 			}
-			// 		}
-			// 	).path,
-			// 	reached: false,
-			// 	currentPosition: 0
-			// };
+		if (!this.tasks.length) {
+			if (!this.colony.sources.length) {
+				// there are no sources to take from
+				throw new Error('no sources available for harvesting');
+			}
 
-			this.tasks = tasks;
+			this.tasks.push({ action: 'harvest', target: this.colony.sources[0].id });
+
+			if (this.colony.constructionSites.length) {
+				this.tasks.push({ action: 'build' });
+			} else {
+				this.tasks.push(UpgraderCreep.getUpgradeTask(this));
+			}
+
+			this.memory.routing = { target: Game.getObjectById(this.tasks[0].target).pos };
 		}
 
 		if (!this.memory.routing.target && this.tasks.length) {
@@ -82,6 +94,8 @@ export class BuilderCreep extends _Creep {
 			actionReturnCode = this.harvest(targetObject);
 		} else if (action === 'withdraw') {
 			actionReturnCode = this.withdraw(targetObject, RESOURCE_ENERGY);
+		} else if (action === 'upgrade') {
+			return this.upgrade(targetObject);
 		}
 
 		this.log(`${action} - ${actionReturnCode}`);
@@ -137,6 +151,59 @@ export class BuilderCreep extends _Creep {
 
 			default:
 				throw new Error(`Unhandled ${action} result: ${actionReturnCode}`);
+		}
+	}
+
+	public handleBuild(targetId: Id<any>): boolean {
+		if (this.store[RESOURCE_ENERGY] === 0) {
+			this.setNextTask();
+			return true;
+		}
+
+		let target = Game.getObjectById(targetId);
+
+		if (!target || !(target instanceof ConstructionSite)) {
+			if (this.colony.constructionSites.length) {
+				this.currentTask.target = this.colony.constructionSites[0].id;
+			}
+		}
+
+		if (target && target instanceof ConstructionSite) {
+		}
+	}
+
+	public upgrade(targetObject: StructureController): boolean {
+		const returnCode = this.upgradeController(targetObject);
+
+		switch (returnCode) {
+			case OK:
+				if (this.store[RESOURCE_ENERGY] === 0) {
+					this.setNextTask();
+				}
+				return true;
+
+			case ERR_NOT_OWNER:
+				this.setNextTask();
+				return true;
+
+			case ERR_BUSY:
+				return true;
+
+			case ERR_NOT_ENOUGH_RESOURCES:
+				this.setNextTask();
+				return true;
+
+			case ERR_NOT_IN_RANGE:
+				// set path to object
+				return true;
+
+			case ERR_NO_BODYPART:
+				// what could cause this? damage?
+				this.suicide();
+				return false;
+
+			default:
+				throw new Error(`Unhandled upgradeController result: ${returnCode}`);
 		}
 	}
 

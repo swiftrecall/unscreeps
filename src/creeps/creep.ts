@@ -46,6 +46,19 @@ export interface ITask<T = any> {
 	removeRoute?: boolean;
 }
 
+export function actionRequiresEnergy(action: CreepTaskAction): boolean {
+	switch (action) {
+		case 'transfer':
+		case 'repair':
+		case 'build':
+		case 'upgrade':
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 export function SetupCommonCreepCostMatrix(room: Room | string): CostMatrix | undefined {
 	if (typeof room === 'string') {
 		room = Game.rooms[room];
@@ -182,6 +195,10 @@ export abstract class _Creep extends Creep {
 		return this.memory && this.memory.role;
 	}
 
+	public get colony(): Colony {
+		return global_.colonies[this.memory.colony];
+	}
+
 	protected setNextTask() {
 		const completedTask = this.tasks.shift();
 		this.log(`completed: ${completedTask}`);
@@ -207,10 +224,6 @@ export abstract class _Creep extends Creep {
 	 * Execute the creeps assigned task
 	 */
 	abstract execute(): boolean;
-
-	public get colony(): Colony {
-		return global_.colonies[this.memory.colony];
-	}
 
 	private checkRun(): boolean {
 		if (this.spawning) {
@@ -307,14 +320,15 @@ export abstract class _Creep extends Creep {
 
 	private createRoadOnRoute(): void {
 		// check if creep should place route
-		if (this.shouldPlaceRoads()) {
-			this.log('placing road');
+		if (this.colony.constructionSites.length < 100 && this.shouldPlaceRoads()) {
 			// this.log(JSON.stringify(this.room.lookAt(this.pos)));
 			const roadLike = this.room
 				.lookAt(this.pos)
-				.filter((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));
-			if (roadLike.length === 0) {
-				this.room.createConstructionSite(this.pos, STRUCTURE_ROAD);
+				.findIndex((position) => (position.structure && position.structure.structureType === STRUCTURE_ROAD) || (position.constructionSite && position.constructionSite.structureType === STRUCTURE_ROAD));
+			if (roadLike < 0) {
+				this.log('placing road');
+				const returnCode = this.room.createConstructionSite(this.pos, STRUCTURE_ROAD);
+				this.log(`place road result: ${returnCode}`);
 			}
 		}
 	}
